@@ -1,10 +1,13 @@
 package com.example.frontpage
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,9 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-
 
 @Composable
 fun NutritionScreen(
@@ -45,6 +45,14 @@ fun NutritionScreen(
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
     val remainingCalories = calorieGoal - totalCalories
+
+    val totalProtein = foodItems.sumOf { it.protein }
+    val totalCarbs = foodItems.sumOf { it.carbs }
+    val totalFat = foodItems.sumOf { it.fat }
+
+    val proteinGoal = 150
+    val carbsGoal = 300
+    val fatGoal = 80
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
         Color(0xFFFFCDD2)
@@ -117,6 +125,15 @@ fun NutritionScreen(
             title = "SNACKS",
             foodItems = snackItems,
             onDeleteFood = onDeleteFood
+        )
+
+        MacroSummaryCard(
+            totalProtein = totalProtein,
+            proteinGoal = proteinGoal,
+            totalCarbs = totalCarbs,
+            carbsGoal = carbsGoal,
+            totalFat = totalFat,
+            fatGoal = fatGoal
         )
 
         Button(
@@ -207,13 +224,13 @@ fun SwipeToDeleteFoodCard(
             Card(
                 modifier = Modifier
                     .width(90.dp)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .clickable {
+                        onDeleteFood(food)
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFFD32F2F)
-                ),
-                onClick = {
-                    onDeleteFood(food)
-                }
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -230,5 +247,73 @@ fun SwipeToDeleteFoodCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MacroSummaryCard(
+    totalProtein: Int,
+    proteinGoal: Int,
+    totalCarbs: Int,
+    carbsGoal: Int,
+    totalFat: Int,
+    fatGoal: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Macronutrients", style = MaterialTheme.typography.titleMedium)
+
+            MacroProgressRow(
+                macroName = "Protein",
+                currentAmount = totalProtein,
+                goalAmount = proteinGoal
+            )
+
+            MacroProgressRow(
+                macroName = "Carbohydrates",
+                currentAmount = totalCarbs,
+                goalAmount = carbsGoal
+            )
+
+            MacroProgressRow(
+                macroName = "Fats",
+                currentAmount = totalFat,
+                goalAmount = fatGoal
+            )
+        }
+    }
+}
+
+@Composable
+fun MacroProgressRow(
+    macroName: String,
+    currentAmount: Int,
+    goalAmount: Int
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(macroName)
+            Text("$currentAmount / $goalAmount g")
+        }
+
+        LinearProgressIndicator(
+            progress = {
+                (currentAmount.toFloat() / goalAmount).coerceIn(0f, 1f)
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
