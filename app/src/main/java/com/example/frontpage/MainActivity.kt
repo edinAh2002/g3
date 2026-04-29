@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.ui.theme.FrontPageTheme
 
@@ -47,7 +48,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen() {
 
-    var calories by remember { mutableStateOf("1,850") }
     var workout by remember { mutableStateOf("45 min") }
     var sleep by remember { mutableStateOf("7.5h") }
     var hydration by remember { mutableStateOf("6 cups") }
@@ -56,6 +56,16 @@ fun HomeScreen() {
     var showFoodLogging by remember { mutableStateOf(false) }
     var showNutrition by remember { mutableStateOf(false) }
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
+
+    val calorieGoal = 2500
+    val totalCalories = foodItems.sumOf { it.calories }
+    val calorieDisplay = "$totalCalories / $calorieGoal"
+
+    val caloriesCardColor = if (totalCalories > calorieGoal) {
+        Color(0xFFFFCDD2)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
 
     Scaffold(
         bottomBar = {
@@ -104,6 +114,9 @@ fun HomeScreen() {
                 },
                 onLogMealClick = {
                     showFoodLogging = true
+                },
+                onDeleteFood = { foodToDelete ->
+                    foodItems = foodItems - foodToDelete
                 }
             )
         } else {
@@ -123,13 +136,32 @@ fun HomeScreen() {
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Calories", calories, Modifier.weight(1f))
-                    StatCard("Workout", workout, Modifier.weight(1f))
+                    StatCard(
+                        title = "Calories",
+                        value = calorieDisplay,
+                        modifier = Modifier.weight(1f),
+                        containerColor = caloriesCardColor
+                    )
+
+                    StatCard(
+                        title = "Workout",
+                        value = workout,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Sleep", sleep, Modifier.weight(1f))
-                    StatCard("Hydration", hydration, Modifier.weight(1f))
+                    StatCard(
+                        title = "Sleep",
+                        value = sleep,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    StatCard(
+                        title = "Hydration",
+                        value = hydration,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
                 Card(
@@ -185,12 +217,6 @@ fun HomeScreen() {
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         OutlinedTextField(
-                            value = calories,
-                            onValueChange = { calories = it },
-                            label = { Text("Calories") }
-                        )
-
-                        OutlinedTextField(
                             value = workout,
                             onValueChange = { workout = it },
                             label = { Text("Workout") }
@@ -226,11 +252,6 @@ fun HomeScreen() {
             FoodLoggingScreen(
                 onAddFood = { newFood ->
                     foodItems = foodItems + newFood
-
-                    val updatedTotalCalories =
-                        foodItems.sumOf { it.calories } + newFood.calories
-
-                    calories = "$updatedTotalCalories kcal"
                 },
                 onClose = {
                     showFoodLogging = false
@@ -244,9 +265,15 @@ fun HomeScreen() {
 fun StatCard(
     title: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall)
