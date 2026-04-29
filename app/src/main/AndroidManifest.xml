@@ -11,6 +11,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Fittastic">
+
+        <activity android:name=".MoodTrackingActivity" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
