@@ -298,6 +298,8 @@ fun MacroProgressRow(
     currentAmount: Int,
     goalAmount: Int
 ) {
+    val isOverGoal = currentAmount > goalAmount
+
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -306,7 +308,17 @@ fun MacroProgressRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(macroName)
-            Text("$currentAmount / $goalAmount g")
+
+            Row {
+                Text(
+                    text = "$currentAmount",
+                    color = if (isOverGoal) Color.Red else MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    text = " / $goalAmount g"
+                )
+            }
         }
 
         LinearProgressIndicator(
