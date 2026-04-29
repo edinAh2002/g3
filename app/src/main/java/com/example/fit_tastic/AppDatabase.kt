@@ -1,31 +1,34 @@
-package com.example.fit_tastic;
+package com.example.fit_tastic
 
-import android.content.Context;
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
 
-import androidx.room.Database;
-import androidx.room.Room;
-import androidx.room.RoomDatabase;
+@Database(
+    entities = [MoodEntry::class],
+    version = 1,
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
 
-@Database(entities = {MoodEntry.class}, version = 1, exportSchema = false)
-public abstract class AppDatabase extends RoomDatabase {
+    abstract fun moodDao(): MoodDao
 
-    private static volatile AppDatabase INSTANCE;
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
 
-    public abstract MoodDao moodDao();
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "fittastic_database"
+                ).build()
 
-    public static AppDatabase getDatabase(final Context context) {
-        if (INSTANCE == null) {
-            synchronized (AppDatabase.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(
-                            context.getApplicationContext(),
-                            AppDatabase.class,
-                            "fittastic_database"
-                    ).build();
-                }
+                INSTANCE = instance
+                instance
             }
         }
-
-        return INSTANCE;
     }
 }

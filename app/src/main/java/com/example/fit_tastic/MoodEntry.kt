@@ -1,31 +1,24 @@
-package com.example.fit_tastic;
+package com.example.fit_tastic
 
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.Index;
-import androidx.room.PrimaryKey;
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
-        tableName = "mood_entries",
-        indices = {@Index(value = {"date"}, unique = true)}
+    tableName = "mood_entries",
+    indices = [Index(value = ["date"], unique = true)]
 )
-public class MoodEntry {
-
+data class MoodEntry(
     @PrimaryKey(autoGenerate = true)
-    public int id;
+    val id: Int = 0,
 
     @ColumnInfo(name = "date")
-    public String date;
+    val date: String,
 
     @ColumnInfo(name = "mood_value")
-    public int moodValue;
+    val moodValue: Int,
 
     @ColumnInfo(name = "note")
-    public String note;
-
-    public MoodEntry(String date, int moodValue, String note) {
-        this.date = date;
-        this.moodValue = moodValue;
-        this.note = note;
-    }
-}
+    val note: String
+)

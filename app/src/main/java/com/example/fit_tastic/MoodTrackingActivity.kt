@@ -1,73 +1,91 @@
-package com.example.fit_tastic;
+package com.example.fit_tastic
 
-import android.app.Activity;
-import android.os.Bundle;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.RadioGroup;
-import android.widget.Toast;
+import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.RadioGroup
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+class MoodTrackingActivity : AppCompatActivity() {
 
-public class MoodTrackingActivity extends Activity {
+    private lateinit var moodRadioGroup: RadioGroup
+    private lateinit var moodNoteEditText: EditText
+    private lateinit var saveMoodButton: Button
 
-    private RadioGroup moodRadioGroup;
-    private EditText moodNoteEditText;
-    private Button saveMoodButton;
+    private lateinit var backToHomeButton: Button
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_mood_tracking);
+    private lateinit var database: AppDatabase
 
-        moodRadioGroup = findViewById(R.id.moodRadioGroup);
-        moodNoteEditText = findViewById(R.id.moodNoteEditText);
-        saveMoodButton = findViewById(R.id.saveMoodButton);
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-        saveMoodButton.setOnClickListener(v -> saveMoodEntry());
+        setContentView(R.layout.activity_mood_tracking)
+
+        moodRadioGroup = findViewById(R.id.moodRadioGroup)
+        moodNoteEditText = findViewById(R.id.moodNoteEditText)
+        saveMoodButton = findViewById(R.id.saveMoodButton)
+        backToHomeButton = findViewById(R.id.backToHomeButton)
+        database = AppDatabase.getDatabase(this)
+
+        saveMoodButton.setOnClickListener {
+            saveMoodEntry()
+        }
+        backToHomeButton.setOnClickListener {
+            finish()
+        }
     }
 
-    private void saveMoodEntry() {
-        int selectedId = moodRadioGroup.getCheckedRadioButtonId();
+    private fun saveMoodEntry() {
+        val selectedId = moodRadioGroup.checkedRadioButtonId
 
         if (selectedId == -1) {
-            Toast.makeText(this, "Please select a mood", Toast.LENGTH_SHORT).show();
-            return;
+            Toast.makeText(this, "Please select a mood", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        int moodValue = getMoodValueFromSelectedId(selectedId);
-        String note = moodNoteEditText.getText().toString().trim();
-        String todayDate = getTodayDate();
+        val moodValue = getMoodValueFromSelectedId(selectedId)
+        val note = moodNoteEditText.text.toString().trim()
+        val todayDate = getTodayDate()
 
-        getSharedPreferences("MoodPrefs", MODE_PRIVATE)
-                .edit()
-                .putInt(todayDate + "_mood", moodValue)
-                .putString(todayDate + "_note", note)
-                .apply();
+        val moodEntry = MoodEntry(
+            date = todayDate,
+            moodValue = moodValue,
+            note = note
+        )
 
-        Toast.makeText(this, "Mood saved successfully", Toast.LENGTH_SHORT).show();
-    }
+        lifecycleScope.launch {
+            database.moodDao().insertMood(moodEntry)
 
-    private int getMoodValueFromSelectedId(int selectedId) {
-        if (selectedId == R.id.moodVeryBad) {
-            return 1;
-        } else if (selectedId == R.id.moodBad) {
-            return 2;
-        } else if (selectedId == R.id.moodOkay) {
-            return 3;
-        } else if (selectedId == R.id.moodGood) {
-            return 4;
-        } else if (selectedId == R.id.moodGreat) {
-            return 5;
-        } else {
-            return 0;
+            Toast.makeText(
+                this@MoodTrackingActivity,
+                "Mood saved successfully",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            moodRadioGroup.clearCheck()
+            moodNoteEditText.text.clear()
         }
     }
 
-    private String getTodayDate() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        return formatter.format(new Date());
+    private fun getMoodValueFromSelectedId(selectedId: Int): Int {
+        return when (selectedId) {
+            R.id.moodVeryBad -> 1
+            R.id.moodBad -> 2
+            R.id.moodOkay -> 3
+            R.id.moodGood -> 4
+            R.id.moodGreat -> 5
+            else -> 0
+        }
+    }
+
+    private fun getTodayDate(): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return formatter.format(Date())
     }
 }
