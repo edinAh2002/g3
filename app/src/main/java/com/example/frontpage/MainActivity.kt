@@ -1,4 +1,4 @@
-ppackage com.example.frontpage
+package com.example.frontpage
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
