@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.domain
 
 import java.text.SimpleDateFormat
 import java.util.Calendar

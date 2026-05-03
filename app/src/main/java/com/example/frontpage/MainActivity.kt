@@ -12,13 +12,13 @@ import com.example.frontpage.ui.theme.FrontPageTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
-import com.example.frontpage.sleep.SleepScreen
-import com.example.frontpage.sleep.SleepCalculator
-import com.example.frontpage.sleep.SleepDateUtils
-import com.example.frontpage.sleep.SleepEntry
-import com.example.frontpage.sleep.SleepLogDialog
-import com.example.frontpage.sleep.SleepRepository
-import com.example.frontpage.sleep.SleepSettingsRepository
+import com.example.frontpage.sleep.ui.SleepScreen
+import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.ui.SleepLogDialog
+import com.example.frontpage.sleep.data.SleepRepository
+import com.example.frontpage.sleep.data.SleepSettingsRepository
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

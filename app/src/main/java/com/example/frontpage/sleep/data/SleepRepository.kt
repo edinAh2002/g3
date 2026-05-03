@@ -1,4 +1,6 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.data
+
+import com.example.frontpage.sleep.model.SleepEntry
 
 object SleepRepository {
 

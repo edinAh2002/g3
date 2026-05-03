@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.model
 
 data class SleepEntry(
     val id: Int,

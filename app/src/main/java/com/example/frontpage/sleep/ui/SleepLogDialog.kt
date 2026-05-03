@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepQuality
+import com.example.frontpage.sleep.domain.SleepCalculator
 
 private enum class TimePickerTarget {
     SleepTime,

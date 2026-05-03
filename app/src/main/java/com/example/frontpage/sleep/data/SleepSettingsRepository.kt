@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.data
 
 object SleepSettingsRepository {
 

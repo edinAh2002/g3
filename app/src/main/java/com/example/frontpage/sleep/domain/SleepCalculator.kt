@@ -1,4 +1,5 @@
-package com.example.frontpage.sleep
+package com.example.frontpage.sleep.domain
+import com.example.frontpage.sleep.model.SleepEntry
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
