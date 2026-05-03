@@ -198,7 +198,7 @@ fun HomeScreen() {
                     onDismiss = {
                         showSleepLogDialog = false
                     },
-                    onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes ->
+                    onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
 
                         sleep = SleepCalculator.formatDuration(durationMinutes)
 
@@ -211,7 +211,8 @@ fun HomeScreen() {
                                 wakeHour = wakeHour,
                                 wakeMinute = wakeMinute,
                                 durationMinutes = durationMinutes,
-                                quality = quality
+                                quality = quality,
+                                notes = notes
                             )
                         )
 

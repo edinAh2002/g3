@@ -8,5 +8,6 @@ data class SleepEntry(
     val wakeHour: Int,
     val wakeMinute: Int,
     val durationMinutes: Int,
-    val quality: SleepQuality
+    val quality: SleepQuality,
+    val notes: String = ""
 )

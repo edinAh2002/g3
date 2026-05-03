@@ -166,7 +166,7 @@ fun SleepScreen() {
             onDismiss = {
                 showSleepLogDialog = false
             },
-            onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes ->
+            onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
                 SleepRepository.addSleep(
                     SleepEntry(
                         id = System.currentTimeMillis().toInt(),
@@ -176,7 +176,8 @@ fun SleepScreen() {
                         wakeHour = wakeHour,
                         wakeMinute = wakeMinute,
                         durationMinutes = durationMinutes,
-                        quality = quality
+                        quality = quality,
+                        notes = notes
                     )
                 )
 
@@ -234,6 +235,9 @@ fun SleepHistoryCard(
             )
 
             Text("Quality: ${entry.quality}")
+            if (entry.notes.isNotBlank()) {
+                Text("Notes: ${entry.notes}")
+            }
 
             OutlinedButton(
                 onClick = onDelete,

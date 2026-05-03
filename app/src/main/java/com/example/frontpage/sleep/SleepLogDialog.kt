@@ -11,6 +11,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -38,7 +39,8 @@ fun SleepLogDialog(
         wakeHour: Int,
         wakeMinute: Int,
         quality: SleepQuality,
-        durationMinutes: Int
+        durationMinutes: Int,
+        notes: String
     ) -> Unit
 ) {
     var sleepHour by remember { mutableStateOf(23) }
@@ -48,6 +50,7 @@ fun SleepLogDialog(
     var wakeMinute by remember { mutableStateOf(0) }
 
     var selectedQuality by remember { mutableStateOf(SleepQuality.Good) }
+    var notes by remember { mutableStateOf("") }
 
     var activeTimePicker by remember { mutableStateOf<TimePickerTarget?>(null) }
 
@@ -136,6 +139,16 @@ fun SleepLogDialog(
                     }
                 }
 
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("Notes") },
+                    placeholder = { Text("Example: Woke up twice, felt rested, had caffeine late...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4
+                )
+
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -166,7 +179,8 @@ fun SleepLogDialog(
                         wakeHour,
                         wakeMinute,
                         selectedQuality,
-                        durationMinutes
+                        durationMinutes,
+                        notes.trim()
                     )
                 }
             ) {
