@@ -12,6 +12,11 @@ import com.example.frontpage.ui.theme.FrontPageTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import com.example.frontpage.sleep.SleepScreen
+import com.example.frontpage.sleep.SleepCalculator
+import com.example.frontpage.sleep.SleepEntry
+import com.example.frontpage.sleep.SleepLogDialog
+import com.example.frontpage.sleep.SleepRepository
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,14 +37,16 @@ fun HomeScreen() {
     var sleep by remember { mutableStateOf("7.5h") }
     var hydration by remember { mutableStateOf("6 cups") }
     var showSettings by remember { mutableStateOf(false) }
+    var currentScreen by remember { mutableStateOf("Home") }
+    var showSleepLogDialog by remember { mutableStateOf(false) }
 
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = true,
-                    onClick = {},
+                    selected = currentScreen == "Home",
+                    onClick = { currentScreen = "Home" },
                     label = { Text("Home") },
                     icon = { Text("🏠") }
                 )
@@ -56,14 +63,23 @@ fun HomeScreen() {
                     icon = { Text("🥗") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = {},
+                    selected = currentScreen == "Sleep",
+                    onClick = { currentScreen = "Sleep" },
                     label = { Text("Sleep") },
                     icon = { Text("🌙") }
                 )
             }
         }
     ) { padding ->
+        if (currentScreen == "Sleep") {
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                SleepScreen()
+            }
+        } else {
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -125,16 +141,14 @@ fun HomeScreen() {
             }
 
             Button(
-                onClick = {},
+                onClick = { showSleepLogDialog = true },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
                 Text("Log Sleep")
-
-
-
             }
+
             if (showSettings) {
                 AlertDialog(
                     onDismissRequest = { showSettings = false },
@@ -174,9 +188,38 @@ fun HomeScreen() {
                     dismissButton = {
                         TextButton(onClick = { showSettings = false }) {
                             Text("Cancel")
+                            }
                         }
+                    )
+                }
+
+            if (showSleepLogDialog) {
+                SleepLogDialog(
+                    onDismiss = {
+                        showSleepLogDialog = false
+                    },
+                    onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes ->
+
+                        sleep = SleepCalculator.formatDuration(durationMinutes)
+
+                        SleepRepository.addSleep(
+                            SleepEntry(
+                                id = System.currentTimeMillis().toInt(),
+                                date = "Today",
+                                sleepHour = sleepHour,
+                                sleepMinute = sleepMinute,
+                                wakeHour = wakeHour,
+                                wakeMinute = wakeMinute,
+                                durationMinutes = durationMinutes,
+                                quality = quality
+                            )
+                        )
+
+                        showSleepLogDialog = false
                     }
                 )
+            }
+
             }
         }
     }
