@@ -4,6 +4,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.abs
 
 object SleepCalculator {
 
@@ -195,5 +196,107 @@ object SleepCalculator {
         }
 
         return "You usually sleep around ${formatClockMinutes(averageBedtime)} and wake up around ${formatClockMinutes(averageWakeTime)}."
+    }
+
+    fun calculateSleepConsistencyVariationMinutes(
+        sleepLogs: List<SleepEntry>
+    ): Int? {
+        if (sleepLogs.size < 2) return null
+
+        val averageBedtime = calculateAverageBedtimeMinutes(sleepLogs) ?: return null
+        val averageWakeTime = calculateAverageWakeTimeMinutes(sleepLogs) ?: return null
+        val averageDuration = sleepLogs.map { it.durationMinutes }.average()
+
+        val bedtimeVariation = sleepLogs.map {
+            circularMinuteDistance(
+                toClockMinutes(it.sleepHour, it.sleepMinute),
+                averageBedtime
+            )
+        }.average()
+
+        val wakeTimeVariation = sleepLogs.map {
+            circularMinuteDistance(
+                toClockMinutes(it.wakeHour, it.wakeMinute),
+                averageWakeTime
+            )
+        }.average()
+
+        val durationVariation = sleepLogs.map {
+            abs(it.durationMinutes - averageDuration)
+        }.average()
+
+        return ((bedtimeVariation + wakeTimeVariation + durationVariation) / 3.0).roundToInt()
+    }
+
+    fun calculateSleepDurationRangeMinutes(
+        sleepLogs: List<SleepEntry>
+    ): Int? {
+        if (sleepLogs.size < 2) return null
+
+        val shortestDuration = sleepLogs.minOf { it.durationMinutes }
+        val longestDuration = sleepLogs.maxOf { it.durationMinutes }
+
+        return longestDuration - shortestDuration
+    }
+
+    private fun circularMinuteDistance(
+        firstMinutes: Int,
+        secondMinutes: Int
+    ): Int {
+        val difference = abs(firstMinutes - secondMinutes)
+        return minOf(difference, MINUTES_IN_DAY - difference)
+    }
+
+    fun getSleepConsistencyRating(
+        variationMinutes: Int?,
+        durationRangeMinutes: Int?
+    ): String {
+        if (variationMinutes == null || durationRangeMinutes == null) {
+            return "Not enough data"
+        }
+
+        return when {
+            variationMinutes <= 20 && durationRangeMinutes <= 30 -> "Excellent"
+            variationMinutes <= 45 && durationRangeMinutes <= 60 -> "Good"
+            variationMinutes <= 75 && durationRangeMinutes <= 120 -> "Okay"
+            else -> "Needs work"
+        }
+    }
+
+    fun getSleepConsistencyDescription(
+        variationMinutes: Int?,
+        durationRangeMinutes: Int?
+    ): String {
+        if (variationMinutes == null || durationRangeMinutes == null) {
+            return "Log at least two sleep entries to calculate your sleep consistency."
+        }
+
+        return when {
+            variationMinutes <= 20 && durationRangeMinutes <= 30 ->
+                "Your sleep times and sleep duration are very consistent."
+
+            variationMinutes <= 45 && durationRangeMinutes <= 60 ->
+                "Your sleep routine is fairly consistent."
+
+            variationMinutes <= 75 && durationRangeMinutes <= 120 ->
+                "Your sleep schedule changes a bit. A more regular routine could help."
+
+            else ->
+                "Your sleep schedule and sleep duration vary quite a lot. Try keeping bedtime, wake-up time, and sleep length more consistent."
+        }
+    }
+
+    fun calculateSleepConsistencyProgress(
+        variationMinutes: Int?,
+        durationRangeMinutes: Int?
+    ): Float {
+        if (variationMinutes == null || durationRangeMinutes == null) return 0f
+
+        return when {
+            variationMinutes <= 20 && durationRangeMinutes <= 30 -> 1f
+            variationMinutes <= 45 && durationRangeMinutes <= 60 -> 0.75f
+            variationMinutes <= 75 && durationRangeMinutes <= 120 -> 0.45f
+            else -> 0.2f
+        }
     }
 }

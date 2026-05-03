@@ -48,9 +48,22 @@ fun SleepScreen() {
 
     val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
     val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
+    val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
+
     val averageBedtimeMinutes = SleepCalculator.calculateAverageBedtimeMinutes(sleepLogs)
     val averageWakeTimeMinutes = SleepCalculator.calculateAverageWakeTimeMinutes(sleepLogs)
-    val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
+
+    val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
+
+    val last7DaysSleepLogs = sleepLogs.filter {
+        it.dateMillis >= sevenDaysAgo
+    }
+
+    val sleepConsistencyVariationMinutes =
+        SleepCalculator.calculateSleepConsistencyVariationMinutes(last7DaysSleepLogs)
+
+    val sleepDurationRangeMinutes =
+        SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
 
     val filteredSleepLogs = when (selectedHistoryFilter) {
         SleepHistoryFilter.All -> sleepLogs
@@ -212,6 +225,17 @@ fun SleepScreen() {
             averageBedtimeMinutes = averageBedtimeMinutes,
             averageWakeTimeMinutes = averageWakeTimeMinutes,
             averageDurationMinutes = averageSleepMinutes
+        )
+
+        Text(
+            text = "Sleep Consistency - Last 7 Days",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        SleepConsistencyCard(
+            variationMinutes = sleepConsistencyVariationMinutes,
+            durationRangeMinutes = sleepDurationRangeMinutes,
+            logCount = last7DaysSleepLogs.size
         )
 
         Text(
@@ -756,6 +780,71 @@ fun SleepTrendItem(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge
+            )
+        }
+    }
+}
+
+@Composable
+fun SleepConsistencyCard(
+    variationMinutes: Int?,
+    durationRangeMinutes: Int?,
+    logCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val rating = SleepCalculator.getSleepConsistencyRating(
+        variationMinutes = variationMinutes,
+        durationRangeMinutes = durationRangeMinutes
+    )
+
+    val description = SleepCalculator.getSleepConsistencyDescription(
+        variationMinutes = variationMinutes,
+        durationRangeMinutes = durationRangeMinutes
+    )
+
+    val progress = SleepCalculator.calculateSleepConsistencyProgress(
+        variationMinutes = variationMinutes,
+        durationRangeMinutes = durationRangeMinutes
+    )
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = rating,
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Text(
+                text = "Based on $logCount logs from the last 7 days",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            if (variationMinutes != null && durationRangeMinutes != null) {
+                Text(
+                    text = "Average consistency variation: ${SleepCalculator.formatDuration(variationMinutes)}"
+                )
+
+                Text(
+                    text = "Sleep duration changed by up to ${SleepCalculator.formatDuration(durationRangeMinutes)} between logs."
+                )
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
