@@ -33,6 +33,7 @@ fun SleepScreen() {
     var showSleepLogDialog by remember { mutableStateOf(false) }
     var sleepLogs by remember { mutableStateOf(SleepRepository.getAllSleepLogs().toList()) }
     var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
+    var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
     val latestSleep = sleepLogs.lastOrNull()
     var goalMinutes by remember { mutableStateOf(SleepSettingsRepository.sleepGoalMinutes) }
@@ -46,6 +47,19 @@ fun SleepScreen() {
 
     val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
     val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
+
+    val filteredSleepLogs = when (selectedHistoryFilter) {
+        SleepHistoryFilter.All -> sleepLogs
+        SleepHistoryFilter.Today -> sleepLogs.filter {
+            SleepDateUtils.isToday(it.dateMillis)
+        }
+        SleepHistoryFilter.ThisWeek -> sleepLogs.filter {
+            SleepDateUtils.isThisWeek(it.dateMillis)
+        }
+        SleepHistoryFilter.ThisMonth -> sleepLogs.filter {
+            SleepDateUtils.isThisMonth(it.dateMillis)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -179,10 +193,17 @@ fun SleepScreen() {
             style = MaterialTheme.typography.titleMedium
         )
 
+        SleepHistoryFilterRow(
+            selectedFilter = selectedHistoryFilter,
+            onFilterSelected = { selectedHistoryFilter = it }
+        )
+
         if (sleepLogs.isEmpty()) {
             Text("Your sleep history will appear here.")
+        } else if (filteredSleepLogs.isEmpty()) {
+            Text("No sleep logs found for this filter.")
         } else {
-            sleepLogs.reversed().forEach { entry ->
+            filteredSleepLogs.reversed().forEach { entry ->
                 SleepHistoryCard(
                     entry = entry,
                     onEdit = {
@@ -463,4 +484,87 @@ fun SleepFeedbackCard(
             )
         }
     }
+}
+
+@Composable
+fun SleepHistoryFilterRow(
+    selectedFilter: SleepHistoryFilter,
+    onFilterSelected: (SleepHistoryFilter) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepHistoryFilterButton(
+                filter = SleepHistoryFilter.All,
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected,
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepHistoryFilterButton(
+                filter = SleepHistoryFilter.Today,
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepHistoryFilterButton(
+                filter = SleepHistoryFilter.ThisWeek,
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected,
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepHistoryFilterButton(
+                filter = SleepHistoryFilter.ThisMonth,
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SleepHistoryFilterButton(
+    filter: SleepHistoryFilter,
+    selectedFilter: SleepHistoryFilter,
+    onFilterSelected: (SleepHistoryFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSelected = filter == selectedFilter
+
+    if (isSelected) {
+        Button(
+            onClick = { onFilterSelected(filter) },
+            modifier = modifier
+        ) {
+            Text(filter.label)
+        }
+    } else {
+        OutlinedButton(
+            onClick = { onFilterSelected(filter) },
+            modifier = modifier
+        ) {
+            Text(filter.label)
+        }
+    }
+}
+
+enum class SleepHistoryFilter(
+    val label: String
+) {
+    All("All"),
+    Today("Today"),
+    ThisWeek("This Week"),
+    ThisMonth("This Month")
 }
