@@ -104,7 +104,11 @@ fun SleepScreen() {
                     )
 
                     Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
-                    Text(SleepCalculator.getSleepFeedback(latestSleep.durationMinutes))
+
+                    SleepFeedbackCard(
+                        durationMinutes = latestSleep.durationMinutes,
+                        goalMinutes = goalMinutes
+                    )
 
                     OutlinedButton(
                         onClick = { showGoalDialog = true },
@@ -192,6 +196,7 @@ fun SleepScreen() {
     if (showSleepLogDialog) {
         SleepLogDialog(
             existingEntry = editingEntry,
+            goalMinutes = goalMinutes,
             onDismiss = {
                 showSleepLogDialog = false
                 editingEntry = null
@@ -394,4 +399,69 @@ fun SleepGoalDialog(
             }
         }
     )
+}
+
+@Composable
+fun SleepFeedbackCard(
+    durationMinutes: Int,
+    goalMinutes: Int,
+    modifier: Modifier = Modifier
+) {
+    val statusTitle = SleepCalculator.getGoalStatusTitle(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    val progressPercent = SleepCalculator.calculateGoalProgressPercent(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    val differenceText = SleepCalculator.getGoalDifferenceText(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    val suggestionText = SleepCalculator.getImprovementSuggestion(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = statusTitle,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = "You slept ${SleepCalculator.formatDuration(durationMinutes)}."
+            )
+
+            Text(
+                text = "Your goal is ${SleepCalculator.formatDuration(goalMinutes)}."
+            )
+
+            Text(
+                text = "Progress: $progressPercent%"
+            )
+
+            Text(
+                text = differenceText
+            )
+
+            Text(
+                text = suggestionText,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }

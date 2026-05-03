@@ -33,6 +33,7 @@ private enum class TimePickerTarget {
 @Composable
 fun SleepLogDialog(
     existingEntry: SleepEntry? = null,
+    goalMinutes: Int = SleepSettingsRepository.sleepGoalMinutes,
     onDismiss: () -> Unit,
     onSave: (
         sleepHour: Int,
@@ -78,7 +79,20 @@ fun SleepLogDialog(
     )
 
     val durationText = SleepCalculator.formatDuration(durationMinutes)
-    val feedbackText = SleepCalculator.getSleepFeedback(durationMinutes)
+    val statusTitle = SleepCalculator.getGoalStatusTitle(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    val feedbackText = SleepCalculator.getGoalDifferenceText(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
+
+    val suggestionText = SleepCalculator.getImprovementSuggestion(
+        durationMinutes = durationMinutes,
+        goalMinutes = goalMinutes
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -173,12 +187,26 @@ fun SleepLogDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text("Sleep Duration")
+
                         Text(
                             text = durationText,
                             style = MaterialTheme.typography.headlineSmall
                         )
+
+                        Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
+
+                        Text(
+                            text = statusTitle,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
                         Text(
                             text = feedbackText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Text(
+                            text = suggestionText,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

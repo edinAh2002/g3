@@ -70,4 +70,57 @@ object SleepCalculator {
 
         return (durationMinutes.toFloat() / goalMinutes.toFloat()).coerceAtMost(1f)
     }
+
+    fun getGoalStatusTitle(
+        durationMinutes: Int,
+        goalMinutes: Int
+    ): String {
+        if (goalMinutes <= 0) return "Sleep logged"
+
+        val progress = durationMinutes.toFloat() / goalMinutes.toFloat()
+
+        return when {
+            progress < 0.75f -> "Needs more rest"
+            progress < 1f -> "Almost there"
+            progress <= 1.15f -> "Goal reached"
+            else -> "Long sleep logged"
+        }
+    }
+
+    fun getGoalDifferenceText(
+        durationMinutes: Int,
+        goalMinutes: Int
+    ): String {
+        val difference = durationMinutes - goalMinutes
+
+        return when {
+            difference == 0 -> "You exactly reached your sleep goal."
+            difference < 0 -> "You were ${formatDuration(-difference)} short of your goal."
+            else -> "You slept ${formatDuration(difference)} more than your goal."
+        }
+    }
+
+    fun getImprovementSuggestion(
+        durationMinutes: Int,
+        goalMinutes: Int
+    ): String {
+        val difference = goalMinutes - durationMinutes
+
+        return when {
+            difference > 90 -> "Try going to bed around 30 minutes earlier tonight."
+            difference > 30 -> "Try going to bed 15–20 minutes earlier tonight."
+            difference > 0 -> "You were very close. A slightly earlier bedtime could help."
+            durationMinutes <= goalMinutes + 90 -> "Great job. Try to keep this sleep routine consistent."
+            else -> "You slept much longer than your goal. Check if your schedule feels balanced."
+        }
+    }
+
+    fun calculateGoalProgressPercent(
+        durationMinutes: Int,
+        goalMinutes: Int
+    ): Int {
+        if (goalMinutes <= 0) return 0
+
+        return ((durationMinutes.toFloat() / goalMinutes.toFloat()) * 100).toInt()
+    }
 }

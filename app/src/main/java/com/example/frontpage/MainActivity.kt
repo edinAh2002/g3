@@ -17,6 +17,7 @@ import com.example.frontpage.sleep.SleepCalculator
 import com.example.frontpage.sleep.SleepEntry
 import com.example.frontpage.sleep.SleepLogDialog
 import com.example.frontpage.sleep.SleepRepository
+import com.example.frontpage.sleep.SleepSettingsRepository
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -195,6 +196,7 @@ fun HomeScreen() {
 
             if (showSleepLogDialog) {
                 SleepLogDialog(
+                    goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
                     onDismiss = {
                         showSleepLogDialog = false
                     },
