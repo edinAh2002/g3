@@ -8,6 +8,14 @@ object SleepRepository {
         sleepLogs.add(entry)
     }
 
+    fun updateSleep(updatedEntry: SleepEntry) {
+        val index = sleepLogs.indexOfFirst { it.id == updatedEntry.id }
+
+        if (index != -1) {
+            sleepLogs[index] = updatedEntry
+        }
+    }
+
     fun deleteSleep(id: Int) {
         sleepLogs.removeAll { it.id == id }
     }

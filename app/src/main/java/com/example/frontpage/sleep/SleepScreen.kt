@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 fun SleepScreen() {
     var showSleepLogDialog by remember { mutableStateOf(false) }
     var sleepLogs by remember { mutableStateOf(SleepRepository.getAllSleepLogs().toList()) }
+    var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
 
     val latestSleep = sleepLogs.lastOrNull()
     val goalMinutes = 8 * 60
@@ -96,7 +97,10 @@ fun SleepScreen() {
         }
 
         Button(
-            onClick = { showSleepLogDialog = true },
+            onClick = {
+                editingEntry = null
+                showSleepLogDialog = true
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Log Sleep")
@@ -152,6 +156,10 @@ fun SleepScreen() {
             sleepLogs.reversed().forEach { entry ->
                 SleepHistoryCard(
                     entry = entry,
+                    onEdit = {
+                        editingEntry = entry
+                        showSleepLogDialog = true
+                    },
                     onDelete = {
                         SleepRepository.deleteSleep(entry.id)
                         sleepLogs = SleepRepository.getAllSleepLogs().toList()
@@ -163,26 +171,44 @@ fun SleepScreen() {
 
     if (showSleepLogDialog) {
         SleepLogDialog(
+            existingEntry = editingEntry,
             onDismiss = {
                 showSleepLogDialog = false
+                editingEntry = null
             },
             onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
-                SleepRepository.addSleep(
-                    SleepEntry(
-                        id = System.currentTimeMillis().toInt(),
-                        date = "Today",
-                        sleepHour = sleepHour,
-                        sleepMinute = sleepMinute,
-                        wakeHour = wakeHour,
-                        wakeMinute = wakeMinute,
-                        durationMinutes = durationMinutes,
-                        quality = quality,
-                        notes = notes
+
+                if (editingEntry == null) {
+                    SleepRepository.addSleep(
+                        SleepEntry(
+                            id = System.currentTimeMillis().toInt(),
+                            date = "Today",
+                            sleepHour = sleepHour,
+                            sleepMinute = sleepMinute,
+                            wakeHour = wakeHour,
+                            wakeMinute = wakeMinute,
+                            durationMinutes = durationMinutes,
+                            quality = quality,
+                            notes = notes
+                        )
                     )
-                )
+                } else {
+                    SleepRepository.updateSleep(
+                        editingEntry!!.copy(
+                            sleepHour = sleepHour,
+                            sleepMinute = sleepMinute,
+                            wakeHour = wakeHour,
+                            wakeMinute = wakeMinute,
+                            durationMinutes = durationMinutes,
+                            quality = quality,
+                            notes = notes
+                        )
+                    )
+                }
 
                 sleepLogs = SleepRepository.getAllSleepLogs().toList()
                 showSleepLogDialog = false
+                editingEntry = null
             }
         )
     }
@@ -211,6 +237,7 @@ fun SleepStatCard(
 @Composable
 fun SleepHistoryCard(
     entry: SleepEntry,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -235,15 +262,28 @@ fun SleepHistoryCard(
             )
 
             Text("Quality: ${entry.quality}")
+
             if (entry.notes.isNotBlank()) {
                 Text("Notes: ${entry.notes}")
             }
 
-            OutlinedButton(
-                onClick = onDelete,
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Delete")
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Edit")
+                }
+
+                OutlinedButton(
+                    onClick = onDelete,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Delete")
+                }
             }
         }
     }

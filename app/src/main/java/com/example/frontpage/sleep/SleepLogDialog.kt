@@ -32,6 +32,7 @@ private enum class TimePickerTarget {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepLogDialog(
+    existingEntry: SleepEntry? = null,
     onDismiss: () -> Unit,
     onSave: (
         sleepHour: Int,
@@ -43,14 +44,29 @@ fun SleepLogDialog(
         notes: String
     ) -> Unit
 ) {
-    var sleepHour by remember { mutableStateOf(23) }
-    var sleepMinute by remember { mutableStateOf(0) }
+    var sleepHour by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.sleepHour ?: 23)
+    }
 
-    var wakeHour by remember { mutableStateOf(7) }
-    var wakeMinute by remember { mutableStateOf(0) }
+    var sleepMinute by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.sleepMinute ?: 0)
+    }
 
-    var selectedQuality by remember { mutableStateOf(SleepQuality.Good) }
-    var notes by remember { mutableStateOf("") }
+    var wakeHour by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.wakeHour ?: 7)
+    }
+
+    var wakeMinute by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.wakeMinute ?: 0)
+    }
+
+    var selectedQuality by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.quality ?: SleepQuality.Good)
+    }
+
+    var notes by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.notes ?: "")
+    }
 
     var activeTimePicker by remember { mutableStateOf<TimePickerTarget?>(null) }
 
@@ -67,7 +83,7 @@ fun SleepLogDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Log Sleep")
+            Text(if (existingEntry == null) "Log Sleep" else "Edit Sleep")
         },
         text = {
             Column(
