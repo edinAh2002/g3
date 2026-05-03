@@ -69,4 +69,17 @@ object SleepDateUtils {
         return today.get(Calendar.YEAR) == entryDate.get(Calendar.YEAR) &&
                 today.get(Calendar.MONTH) == entryDate.get(Calendar.MONTH)
     }
+
+    fun isSameDay(firstMillis: Long, secondMillis: Long): Boolean {
+        val first = Calendar.getInstance().apply {
+            timeInMillis = firstMillis
+        }
+
+        val second = Calendar.getInstance().apply {
+            timeInMillis = secondMillis
+        }
+
+        return first.get(Calendar.YEAR) == second.get(Calendar.YEAR) &&
+                first.get(Calendar.DAY_OF_YEAR) == second.get(Calendar.DAY_OF_YEAR)
+    }
 }

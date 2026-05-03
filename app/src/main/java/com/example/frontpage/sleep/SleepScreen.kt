@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
 
 @Composable
 fun SleepScreen() {
@@ -47,6 +48,7 @@ fun SleepScreen() {
 
     val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
     val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
+    val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
 
     val filteredSleepLogs = when (selectedHistoryFilter) {
         SleepHistoryFilter.All -> sleepLogs
@@ -187,6 +189,16 @@ fun SleepScreen() {
                 modifier = Modifier.weight(1f)
             )
         }
+
+        Text(
+            text = "Weekly Sleep Chart",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        WeeklySleepChart(
+            chartData = weeklyChartData,
+            goalMinutes = goalMinutes
+        )
 
         Text(
             text = "Sleep History",
@@ -558,6 +570,124 @@ fun SleepHistoryFilterButton(
             Text(filter.label)
         }
     }
+}
+
+@Composable
+fun WeeklySleepChart(
+    chartData: List<WeeklySleepChartItem>,
+    goalMinutes: Int,
+    modifier: Modifier = Modifier
+) {
+    val maxDuration = maxOf(
+        goalMinutes,
+        chartData.maxOfOrNull { it.durationMinutes } ?: 0,
+        1
+    )
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Last 7 Days",
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            if (chartData.all { it.durationMinutes == 0 }) {
+                Text(
+                    text = "No sleep logged this week yet.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            chartData.forEach { item ->
+                WeeklySleepChartRow(
+                    item = item,
+                    maxDuration = maxDuration
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklySleepChartRow(
+    item: WeeklySleepChartItem,
+    maxDuration: Int
+) {
+    val progress = if (maxDuration > 0) {
+        item.durationMinutes.toFloat() / maxDuration.toFloat()
+    } else {
+        0f
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = item.dayLabel,
+            modifier = Modifier.width(40.dp),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 8.dp)
+        )
+
+        Text(
+            text = if (item.durationMinutes > 0) {
+                SleepCalculator.formatDuration(item.durationMinutes)
+            } else {
+                "--"
+            },
+            modifier = Modifier.width(60.dp),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+data class WeeklySleepChartItem(
+    val dayLabel: String,
+    val durationMinutes: Int,
+    val dateMillis: Long
+)
+
+fun buildWeeklySleepChartData(
+    sleepLogs: List<SleepEntry>
+): List<WeeklySleepChartItem> {
+    val calendar = java.util.Calendar.getInstance()
+    val items = mutableListOf<WeeklySleepChartItem>()
+
+    for (daysAgo in 6 downTo 0) {
+        val dayCalendar = calendar.clone() as java.util.Calendar
+        dayCalendar.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+
+        val dayMillis = dayCalendar.timeInMillis
+
+        val latestLogForDay = sleepLogs
+            .filter { SleepDateUtils.isSameDay(it.dateMillis, dayMillis) }
+            .maxByOrNull { it.dateMillis }
+
+        items.add(
+            WeeklySleepChartItem(
+                dayLabel = SleepDateUtils.formatDayName(dayMillis),
+                durationMinutes = latestLogForDay?.durationMinutes ?: 0,
+                dateMillis = dayMillis
+            )
+        )
+    }
+
+    return items
 }
 
 enum class SleepHistoryFilter(
