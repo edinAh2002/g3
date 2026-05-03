@@ -48,6 +48,8 @@ fun SleepScreen() {
 
     val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
     val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
+    val averageBedtimeMinutes = SleepCalculator.calculateAverageBedtimeMinutes(sleepLogs)
+    val averageWakeTimeMinutes = SleepCalculator.calculateAverageWakeTimeMinutes(sleepLogs)
     val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
 
     val filteredSleepLogs = when (selectedHistoryFilter) {
@@ -198,6 +200,18 @@ fun SleepScreen() {
         WeeklySleepChart(
             chartData = weeklyChartData,
             goalMinutes = goalMinutes
+        )
+
+        Text(
+            text = "Bedtime & Wake-Up Trends",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        SleepTrendsCard(
+            sleepLogs = sleepLogs,
+            averageBedtimeMinutes = averageBedtimeMinutes,
+            averageWakeTimeMinutes = averageWakeTimeMinutes,
+            averageDurationMinutes = averageSleepMinutes
         )
 
         Text(
@@ -653,6 +667,97 @@ fun WeeklySleepChartRow(
             modifier = Modifier.width(60.dp),
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+@Composable
+fun SleepTrendsCard(
+    sleepLogs: List<SleepEntry>,
+    averageBedtimeMinutes: Int?,
+    averageWakeTimeMinutes: Int?,
+    averageDurationMinutes: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (sleepLogs.isEmpty()) {
+                Text(
+                    text = "No trend data yet",
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                Text(
+                    text = "Log sleep for a few days to see your usual bedtime and wake-up time.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                Text(
+                    text = SleepCalculator.getSleepTrendSummary(sleepLogs),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SleepTrendItem(
+                        title = "Avg Bedtime",
+                        value = averageBedtimeMinutes?.let {
+                            SleepCalculator.formatClockMinutes(it)
+                        } ?: "--",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    SleepTrendItem(
+                        title = "Avg Wake",
+                        value = averageWakeTimeMinutes?.let {
+                            SleepCalculator.formatClockMinutes(it)
+                        } ?: "--",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                SleepTrendItem(
+                    title = "Avg Duration",
+                    value = SleepCalculator.formatDuration(averageDurationMinutes),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SleepTrendItem(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge
+            )
+        }
     }
 }
 

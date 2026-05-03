@@ -1,4 +1,9 @@
 package com.example.frontpage.sleep
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 object SleepCalculator {
 
@@ -122,5 +127,73 @@ object SleepCalculator {
         if (goalMinutes <= 0) return 0
 
         return ((durationMinutes.toFloat() / goalMinutes.toFloat()) * 100).toInt()
+    }
+
+    private const val MINUTES_IN_DAY = 24 * 60
+
+    fun toClockMinutes(hour: Int, minute: Int): Int {
+        val total = hour * 60 + minute
+        return ((total % MINUTES_IN_DAY) + MINUTES_IN_DAY) % MINUTES_IN_DAY
+    }
+
+    fun formatClockMinutes(clockMinutes: Int): String {
+        val normalizedMinutes = ((clockMinutes % MINUTES_IN_DAY) + MINUTES_IN_DAY) % MINUTES_IN_DAY
+        val hour = normalizedMinutes / 60
+        val minute = normalizedMinutes % 60
+
+        return formatTime(hour, minute)
+    }
+
+    fun calculateAverageBedtimeMinutes(sleepLogs: List<SleepEntry>): Int? {
+        return calculateCircularAverageMinutes(
+            sleepLogs.map {
+                toClockMinutes(it.sleepHour, it.sleepMinute)
+            }
+        )
+    }
+
+    fun calculateAverageWakeTimeMinutes(sleepLogs: List<SleepEntry>): Int? {
+        return calculateCircularAverageMinutes(
+            sleepLogs.map {
+                toClockMinutes(it.wakeHour, it.wakeMinute)
+            }
+        )
+    }
+
+    private fun calculateCircularAverageMinutes(clockTimes: List<Int>): Int? {
+        if (clockTimes.isEmpty()) return null
+
+        var totalSin = 0.0
+        var totalCos = 0.0
+
+        clockTimes.forEach { minutes ->
+            val angle = minutes.toDouble() / MINUTES_IN_DAY.toDouble() * 2.0 * PI
+            totalSin += sin(angle)
+            totalCos += cos(angle)
+        }
+
+        val averageAngle = atan2(
+            totalSin / clockTimes.size,
+            totalCos / clockTimes.size
+        )
+
+        val normalizedAngle = if (averageAngle < 0) {
+            averageAngle + 2.0 * PI
+        } else {
+            averageAngle
+        }
+
+        return ((normalizedAngle / (2.0 * PI)) * MINUTES_IN_DAY).roundToInt() % MINUTES_IN_DAY
+    }
+
+    fun getSleepTrendSummary(sleepLogs: List<SleepEntry>): String {
+        val averageBedtime = calculateAverageBedtimeMinutes(sleepLogs)
+        val averageWakeTime = calculateAverageWakeTimeMinutes(sleepLogs)
+
+        if (averageBedtime == null || averageWakeTime == null) {
+            return "Log more sleep entries to see your bedtime and wake-up trends."
+        }
+
+        return "You usually sleep around ${formatClockMinutes(averageBedtime)} and wake up around ${formatClockMinutes(averageWakeTime)}."
     }
 }
