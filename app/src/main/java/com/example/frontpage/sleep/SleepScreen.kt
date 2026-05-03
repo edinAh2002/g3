@@ -22,6 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 
 @Composable
 fun SleepScreen() {
@@ -30,7 +35,8 @@ fun SleepScreen() {
     var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
 
     val latestSleep = sleepLogs.lastOrNull()
-    val goalMinutes = 8 * 60
+    var goalMinutes by remember { mutableStateOf(SleepSettingsRepository.sleepGoalMinutes) }
+    var showGoalDialog by remember { mutableStateOf(false) }
 
     val averageSleepMinutes = if (sleepLogs.isEmpty()) {
         0
@@ -68,6 +74,13 @@ fun SleepScreen() {
                 if (latestSleep == null) {
                     Text("No sleep logged yet.")
                     Text("Tap Log Sleep to add your first sleep entry.")
+
+                    OutlinedButton(
+                        onClick = { showGoalDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Edit Sleep Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
+                    }
                 } else {
                     Text(
                         text = SleepCalculator.formatDuration(latestSleep.durationMinutes),
@@ -92,6 +105,13 @@ fun SleepScreen() {
 
                     Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
                     Text(SleepCalculator.getSleepFeedback(latestSleep.durationMinutes))
+
+                    OutlinedButton(
+                        onClick = { showGoalDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Edit Sleep Goal")
+                    }
                 }
             }
         }
@@ -212,6 +232,20 @@ fun SleepScreen() {
             }
         )
     }
+
+    if (showGoalDialog) {
+        SleepGoalDialog(
+            currentGoalMinutes = goalMinutes,
+            onDismiss = {
+                showGoalDialog = false
+            },
+            onSave = { newGoalMinutes ->
+                SleepSettingsRepository.updateSleepGoalMinutes(newGoalMinutes)
+                goalMinutes = SleepSettingsRepository.sleepGoalMinutes
+                showGoalDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -287,4 +321,77 @@ fun SleepHistoryCard(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SleepGoalDialog(
+    currentGoalMinutes: Int,
+    onDismiss: () -> Unit,
+    onSave: (Int) -> Unit
+) {
+    val currentHour = currentGoalMinutes / 60
+    val currentMinute = currentGoalMinutes % 60
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = currentHour,
+        initialMinute = currentMinute,
+        is24Hour = true
+    )
+
+    val selectedGoalMinutes = timePickerState.hour * 60 + timePickerState.minute
+
+    val isGoalValid = selectedGoalMinutes in (4 * 60)..(12 * 60)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Edit Sleep Goal")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Choose your target sleep duration.")
+
+                TimePicker(
+                    state = timePickerState,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "Selected goal: ${SleepCalculator.formatDuration(selectedGoalMinutes)}",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                if (!isGoalValid) {
+                    Text(
+                        text = "Sleep goal must be between 4h and 12h.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        text = "This goal will be used for your progress bar and sleep feedback.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = isGoalValid,
+                onClick = {
+                    onSave(selectedGoalMinutes)
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
