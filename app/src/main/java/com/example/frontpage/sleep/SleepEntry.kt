@@ -9,5 +9,6 @@ data class SleepEntry(
     val wakeMinute: Int,
     val durationMinutes: Int,
     val quality: SleepQuality,
-    val notes: String = ""
+    val notes: String = "",
+    val dateMillis: Long = System.currentTimeMillis()
 )
