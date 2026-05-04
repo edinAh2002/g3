@@ -12,25 +12,39 @@ import com.example.frontpage.ui.theme.FrontPageTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import android.content.Context
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             FrontPageTheme {
-                HomeScreen()
+                HomeScreen(this)
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(context: Context) {
 
-    var calories by remember { mutableStateOf("1,850") }
-    var workout by remember { mutableStateOf("45 min") }
-    var sleep by remember { mutableStateOf("7.5h") }
-    var hydration by remember { mutableStateOf("6 cups") }
+    val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
+
+    var calories by remember {
+        mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
+    }
+
+    var workout by remember {
+        mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
+    }
+
+    var sleep by remember {
+        mutableStateOf(sharedPreferences.getString("sleep", "7.5h") ?: "7.5h")
+    }
+
+    var hydration by remember {
+        mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
+    }
     var showSettings by remember { mutableStateOf(false) }
 
 
@@ -166,11 +180,24 @@ fun HomeScreen() {
                             )
                         }
                     },
+
                     confirmButton = {
-                        TextButton(onClick = { showSettings = false }) {
+                        TextButton(
+                            onClick = {
+                                sharedPreferences.edit()
+                                    .putString("calories", calories)
+                                    .putString("workout", workout)
+                                    .putString("sleep", sleep)
+                                    .putString("hydration", hydration)
+                                    .apply()
+
+                                showSettings = false
+                            }
+                        ) {
                             Text("Save")
                         }
                     },
+
                     dismissButton = {
                         TextButton(onClick = { showSettings = false }) {
                             Text("Cancel")
