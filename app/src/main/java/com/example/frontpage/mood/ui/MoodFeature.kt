@@ -19,7 +19,7 @@ object MoodFeature {
         modifier: Modifier = Modifier,
         onLogNewMood: () -> Unit
     ) {
-        MoodLogRoute(
+        MoodMainRoute(
             modifier = modifier,
             onLogNewMood = onLogNewMood
         )

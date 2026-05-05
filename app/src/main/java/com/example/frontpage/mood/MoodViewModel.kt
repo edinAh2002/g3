@@ -6,8 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.data.MoodRepository
 import com.example.frontpage.mood.domain.MoodDateUtils
+import com.example.frontpage.mood.domain.MoodStatsCalculator
+import com.example.frontpage.mood.model.MoodDateFilter
 import com.example.frontpage.mood.model.MoodEntry
-import com.example.frontpage.mood.model.MoodLogView
+import com.example.frontpage.mood.model.MoodFeelingFilter
+import com.example.frontpage.mood.model.MoodLogFilterState
+import com.example.frontpage.mood.model.MoodSection
 import com.example.frontpage.mood.model.MoodTrackingUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +23,11 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MoodRepository
 
-    private val _moodEntries = MutableStateFlow<List<MoodEntry>>(emptyList())
-    val moodEntries: StateFlow<List<MoodEntry>> = _moodEntries.asStateFlow()
+    private val _allMoodEntries = MutableStateFlow<List<MoodEntry>>(emptyList())
+    val allMoodEntries: StateFlow<List<MoodEntry>> = _allMoodEntries.asStateFlow()
+
+    private val _filteredMoodEntries = MutableStateFlow<List<MoodEntry>>(emptyList())
+    val filteredMoodEntries: StateFlow<List<MoodEntry>> = _filteredMoodEntries.asStateFlow()
 
     private val _latestMood = MutableStateFlow<MoodEntry?>(null)
     val latestMood: StateFlow<MoodEntry?> = _latestMood.asStateFlow()
@@ -28,8 +35,14 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
     private val _averageMood = MutableStateFlow<Double?>(null)
     val averageMood: StateFlow<Double?> = _averageMood.asStateFlow()
 
-    private val _activeLogView = MutableStateFlow(MoodLogView.List)
-    val activeLogView: StateFlow<MoodLogView> = _activeLogView.asStateFlow()
+    private val _filteredAverageMood = MutableStateFlow<Double?>(null)
+    val filteredAverageMood: StateFlow<Double?> = _filteredAverageMood.asStateFlow()
+
+    private val _activeSection = MutableStateFlow(MoodSection.Overview)
+    val activeSection: StateFlow<MoodSection> = _activeSection.asStateFlow()
+
+    private val _filterState = MutableStateFlow(MoodLogFilterState())
+    val filterState: StateFlow<MoodLogFilterState> = _filterState.asStateFlow()
 
     private val _trackingState = MutableStateFlow(MoodTrackingUiState())
     val trackingState: StateFlow<MoodTrackingUiState> = _trackingState.asStateFlow()
@@ -47,19 +60,27 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun showListView() {
-        _activeLogView.value = MoodLogView.List
-        loadMoods()
+    fun showSection(section: MoodSection) {
+        _activeSection.value = section
     }
 
-    fun showWeekView() {
-        _activeLogView.value = MoodLogView.Week
-        loadMoods()
+    fun setFeelingFilter(filter: MoodFeelingFilter) {
+        _filterState.update { current ->
+            current.copy(feelingFilter = filter)
+        }
+        applyFilters()
     }
 
-    fun showSummaryView() {
-        _activeLogView.value = MoodLogView.Summary
-        loadMoods()
+    fun setDateFilter(filter: MoodDateFilter) {
+        _filterState.update { current ->
+            current.copy(dateFilter = filter)
+        }
+        applyFilters()
+    }
+
+    fun clearFilters() {
+        _filterState.value = MoodLogFilterState()
+        applyFilters()
     }
 
     fun selectMood(moodValue: Int) {
@@ -133,46 +154,50 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun refreshMoodData() {
-        val currentView = _activeLogView.value
+        val entries = repository.getAllMoods()
 
-        val entries = when (currentView) {
-            MoodLogView.List -> {
-                repository.getAllMoods()
-            }
-
-            MoodLogView.Week -> {
-                val weekRange = MoodDateUtils.getCurrentWeekDateRange()
-                repository.getMoodsBetweenDates(
-                    startDate = weekRange.first,
-                    endDate = weekRange.second
-                )
-            }
-
-            MoodLogView.Summary -> {
-                repository.getAllMoods()
-            }
-        }
-
-        val average = when (currentView) {
-            MoodLogView.List -> {
-                repository.getAverageMood()
-            }
-
-            MoodLogView.Week -> {
-                val weekRange = MoodDateUtils.getCurrentWeekDateRange()
-                repository.getAverageMoodBetweenDates(
-                    startDate = weekRange.first,
-                    endDate = weekRange.second
-                )
-            }
-
-            MoodLogView.Summary -> {
-                repository.getAverageMood()
-            }
-        }
-
-        _moodEntries.value = entries
-        _averageMood.value = average
+        _allMoodEntries.value = entries
         _latestMood.value = repository.getLatestMood()
+        _averageMood.value = MoodStatsCalculator.getAverageMood(entries)
+
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        val currentEntries = _allMoodEntries.value
+        val currentFilters = _filterState.value
+
+        val filteredEntries = currentEntries.filter { moodEntry ->
+            matchesFeelingFilter(moodEntry, currentFilters.feelingFilter) &&
+                    matchesDateFilter(moodEntry, currentFilters.dateFilter)
+        }
+
+        _filteredMoodEntries.value = filteredEntries
+        _filteredAverageMood.value = MoodStatsCalculator.getAverageMood(filteredEntries)
+    }
+
+    private fun matchesFeelingFilter(
+        moodEntry: MoodEntry,
+        filter: MoodFeelingFilter
+    ): Boolean {
+        return filter.moodValue == null || moodEntry.moodValue == filter.moodValue
+    }
+
+    private fun matchesDateFilter(
+        moodEntry: MoodEntry,
+        filter: MoodDateFilter
+    ): Boolean {
+        return when (filter) {
+            MoodDateFilter.All -> true
+
+            MoodDateFilter.Today -> {
+                moodEntry.date == MoodDateUtils.getTodayDate()
+            }
+
+            MoodDateFilter.ThisWeek -> {
+                val weekRange = MoodDateUtils.getCurrentWeekDateRange()
+                moodEntry.date >= weekRange.first && moodEntry.date <= weekRange.second
+            }
+        }
     }
 }

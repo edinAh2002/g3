@@ -1,0 +1,27 @@
+Index: app/src/main/java/com/example/frontpage/data/AppDatabase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.frontpage.data\r\n\r\nimport android.content.Context\r\nimport androidx.room.Database\r\nimport androidx.room.Room\r\nimport androidx.room.RoomDatabase\r\nimport com.example.frontpage.mood.data.MoodDao\r\nimport com.example.frontpage.mood.model.MoodEntry\r\n\r\n@Database(\r\n    entities = [\r\n        MoodEntry::class\r\n    ],\r\n    version = 2,\r\n    exportSchema = false\r\n)\r\nabstract class AppDatabase : RoomDatabase() {\r\n\r\n    abstract fun moodDao(): MoodDao\r\n\r\n    companion object {\r\n        @Volatile\r\n        private var INSTANCE: AppDatabase? = null\r\n\r\n        fun getDatabase(context: Context): AppDatabase {\r\n            return INSTANCE ?: synchronized(this) {\r\n                val instance = Room.databaseBuilder(\r\n                    context.applicationContext,\r\n                    AppDatabase::class.java,\r\n                    \"frontpage_database\"\r\n                )\r\n                    .fallbackToDestructiveMigration()\r\n                    .build()\r\n\r\n                INSTANCE = instance\r\n                instance\r\n            }\r\n        }\r\n    }\r\n}
+===================================================================
+diff --git a/app/src/main/java/com/example/frontpage/data/AppDatabase.kt b/app/src/main/java/com/example/frontpage/data/AppDatabase.kt
+--- a/app/src/main/java/com/example/frontpage/data/AppDatabase.kt	(revision 63680eb147b43f2bfb172e27cd74c8ab6120d93e)
++++ b/app/src/main/java/com/example/frontpage/data/AppDatabase.kt	(date 1777972728591)
+@@ -29,7 +29,7 @@
+                     AppDatabase::class.java,
+                     "frontpage_database"
+                 )
+-                    .fallbackToDestructiveMigration()
++                    .fallbackToDestructiveMigration() //reminder to Salam: you need to fix later when an advanced stage of development is reached.
+                     .build()
+ 
+                 INSTANCE = instance
+@@ -37,4 +37,6 @@
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
++//For now, room will delete the old local database upon any change of structure, it does not know how to migrate old data to the new structure
++//once we are done, and we know that the structure of our work won't change, I will continue working on it.
+\ No newline at end of file
