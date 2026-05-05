@@ -105,24 +105,17 @@ fun FitnessApp() {
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Nutrition,
-                    onClick = { selectedScreen = AppScreen.Nutrition },
-                    label = { Text("Nutrition") },
-                    icon = { Text("🥗") }
-                )
-
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Sleep,
-                    onClick = { selectedScreen = AppScreen.Sleep },
-                    label = { Text("Sleep") },
-                    icon = { Text("🌙") }
-                )
-
-                NavigationBarItem(
                     selected = selectedScreen == AppScreen.Steps,
                     onClick = { selectedScreen = AppScreen.Steps },
                     label = { Text("Steps") },
                     icon = { Text("👣") }
+                )
+
+                NavigationBarItem(
+                    selected = selectedScreen == AppScreen.Nutrition,
+                    onClick = { selectedScreen = AppScreen.Nutrition },
+                    label = { Text("Nutrition") },
+                    icon = { Text("🥗") }
                 )
 
                 NavigationBarItem(
@@ -131,6 +124,13 @@ fun FitnessApp() {
                     onClick = { selectedScreen = AppScreen.MoodLog },
                     label = { Text("Mood") },
                     icon = { Text("🙂") }
+                )
+
+                NavigationBarItem(
+                    selected = selectedScreen == AppScreen.Sleep,
+                    onClick = { selectedScreen = AppScreen.Sleep },
+                    label = { Text("Sleep") },
+                    icon = { Text("🌙") }
                 )
             }
         }
