@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.stepcounter.StepCounterScreen
@@ -32,6 +33,9 @@ class MainActivity : ComponentActivity() {
 fun FitnessApp() {
     var selectedScreen by remember { mutableStateOf("Home") }
     val context = LocalContext.current
+
+    var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
+    var showFoodLogging by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
@@ -76,14 +80,26 @@ fun FitnessApp() {
         when (selectedScreen) {
             "Home" -> HomeScreen(
                 context = context,
-                modifier = Modifier.padding(padding)
+                modifier = Modifier.padding(padding),
+                foodItems = foodItems,
+                onLogMealClick = { showFoodLogging = true },
+                onWorkoutClick = { selectedScreen = "Workout" }
             )
 
             "Workout" -> WorkoutScreen()
 
-            "Nutrition" -> PlaceholderScreen(
-                title = "Nutrition",
-                modifier = Modifier.padding(padding)
+            "Nutrition" -> NutritionScreen(
+                padding = padding,
+                foodItems = foodItems,
+                onBackToHome = {
+                    selectedScreen = "Home"
+                },
+                onLogMealClick = {
+                    showFoodLogging = true
+                },
+                onDeleteFood = { foodToDelete ->
+                    foodItems = foodItems - foodToDelete
+                }
             )
 
             "Sleep" -> PlaceholderScreen(
@@ -95,13 +111,27 @@ fun FitnessApp() {
                 modifier = Modifier.padding(padding)
             )
         }
+
+        if (showFoodLogging) {
+            FoodLoggingScreen(
+                onAddFood = { newFood ->
+                    foodItems = foodItems + newFood
+                },
+                onClose = {
+                    showFoodLogging = false
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun HomeScreen(
     context: Context,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    foodItems: List<FoodItem>,
+    onLogMealClick: () -> Unit,
+    onWorkoutClick: () -> Unit
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
@@ -126,6 +156,16 @@ fun HomeScreen(
     var showReminderList by remember { mutableStateOf(false) }
 
     var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
+
+    val calorieGoal = 2500
+    val totalCalories = foodItems.sumOf { it.calories }
+    val calorieDisplay = "$totalCalories / $calorieGoal"
+
+    val caloriesCardColor = if (totalCalories > calorieGoal) {
+        Color(0xFFFFCDD2)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
 
     Column(
         modifier = modifier
@@ -155,13 +195,32 @@ fun HomeScreen(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Calories", calories, Modifier.weight(1f))
-            StatCard("Workout", workout, Modifier.weight(1f))
+            StatCard(
+                title = "Calories",
+                value = calorieDisplay,
+                modifier = Modifier.weight(1f),
+                containerColor = caloriesCardColor
+            )
+
+            StatCard(
+                title = "Workout",
+                value = workout,
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Sleep", sleep, Modifier.weight(1f))
-            StatCard("Hydration", hydration, Modifier.weight(1f))
+            StatCard(
+                title = "Sleep",
+                value = sleep,
+                modifier = Modifier.weight(1f)
+            )
+
+            StatCard(
+                title = "Hydration",
+                value = hydration,
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Card(
@@ -181,7 +240,7 @@ fun HomeScreen(
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
-                onClick = {},
+                onClick = onLogMealClick,
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp)
@@ -190,7 +249,7 @@ fun HomeScreen(
             }
 
             Button(
-                onClick = {},
+                onClick = onWorkoutClick,
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp)
@@ -297,9 +356,15 @@ fun HomeScreen(
 fun StatCard(
     title: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall)
