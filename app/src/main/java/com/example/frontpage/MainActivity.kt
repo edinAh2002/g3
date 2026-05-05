@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.mood.ui.MoodFeature
-import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
@@ -45,6 +44,9 @@ import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.sleep.SleepViewModel
 
 private enum class AppScreen {
     Home,
@@ -77,7 +79,10 @@ fun FitnessApp() {
     var showFoodLogging by remember { mutableStateOf(false) }
     var showSleepLogDialog by remember { mutableStateOf(false) }
 
-    val latestSleep = SleepRepository.getLatestSleep()
+    val sleepViewModel: SleepViewModel = viewModel()
+    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
+
+    val latestSleep = sleepLogs.lastOrNull()
     val sleepDisplay = latestSleep?.let {
         SleepCalculator.formatDuration(it.durationMinutes)
     }
@@ -167,7 +172,8 @@ fun FitnessApp() {
 
             AppScreen.Sleep -> {
                 SleepScreen(
-                    modifier = Modifier.padding(padding)
+                    modifier = Modifier.padding(padding),
+                    sleepViewModel = sleepViewModel
                 )
             }
 
@@ -220,9 +226,9 @@ fun FitnessApp() {
 
                     val now = System.currentTimeMillis()
 
-                    SleepRepository.addSleep(
+                    sleepViewModel.addSleep(
                         SleepEntry(
-                            id = now.toInt(),
+                            id = now,
                             date = SleepDateUtils.formatHistoryDate(now),
                             sleepHour = sleepHour,
                             sleepMinute = sleepMinute,

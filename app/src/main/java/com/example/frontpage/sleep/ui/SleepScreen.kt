@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
@@ -30,6 +29,9 @@ import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
 import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
 import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
 import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import com.example.frontpage.sleep.SleepViewModel
 
 private enum class SleepPage(
     val label: String
@@ -42,14 +44,15 @@ private enum class SleepPage(
 
 @Composable
 fun SleepScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sleepViewModel: SleepViewModel = viewModel()
 ) {
     var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
 
     var showSleepLogDialog by remember { mutableStateOf(false) }
     var showGoalDialog by remember { mutableStateOf(false) }
 
-    var sleepLogs by remember { mutableStateOf(SleepRepository.getAllSleepLogs().toList()) }
+    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
     var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
     var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
@@ -144,8 +147,7 @@ fun SleepScreen(
                         showSleepLogDialog = true
                     },
                     onDeleteEntry = { entry ->
-                        SleepRepository.deleteSleep(entry.id)
-                        sleepLogs = SleepRepository.getAllSleepLogs().toList()
+                        sleepViewModel.deleteSleep(entry.id)
                     }
                 )
             }
@@ -188,9 +190,9 @@ fun SleepScreen(
                 if (editingEntry == null) {
                     val now = System.currentTimeMillis()
 
-                    SleepRepository.addSleep(
+                    sleepViewModel.addSleep(
                         SleepEntry(
-                            id = now.toInt(),
+                            id = now,
                             date = SleepDateUtils.formatHistoryDate(now),
                             sleepHour = sleepHour,
                             sleepMinute = sleepMinute,
@@ -203,7 +205,7 @@ fun SleepScreen(
                         )
                     )
                 } else {
-                    SleepRepository.updateSleep(
+                    sleepViewModel.updateSleep(
                         editingEntry!!.copy(
                             sleepHour = sleepHour,
                             sleepMinute = sleepMinute,
@@ -216,7 +218,6 @@ fun SleepScreen(
                     )
                 }
 
-                sleepLogs = SleepRepository.getAllSleepLogs().toList()
                 showSleepLogDialog = false
                 editingEntry = null
             }
