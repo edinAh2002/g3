@@ -13,6 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.frontpage.sleep.data.SleepRepository
+import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.ui.SleepLogDialog
+import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
@@ -36,6 +43,12 @@ fun FitnessApp() {
 
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
+    var showSleepLogDialog by remember { mutableStateOf(false) }
+
+    val latestSleep = SleepRepository.getLatestSleep()
+    val sleepDisplay = latestSleep?.let {
+        SleepCalculator.formatDuration(it.durationMinutes)
+    }
 
     Scaffold(
         bottomBar = {
@@ -82,8 +95,10 @@ fun FitnessApp() {
                 context = context,
                 modifier = Modifier.padding(padding),
                 foodItems = foodItems,
+                sleepDisplay = sleepDisplay,
                 onLogMealClick = { showFoodLogging = true },
-                onWorkoutClick = { selectedScreen = "Workout" }
+                onWorkoutClick = { selectedScreen = "Workout" },
+                onLogSleepClick = { showSleepLogDialog = true }
             )
 
             "Workout" -> WorkoutScreen()
@@ -102,10 +117,13 @@ fun FitnessApp() {
                 }
             )
 
-            "Sleep" -> PlaceholderScreen(
-                title = "Sleep",
-                modifier = Modifier.padding(padding)
-            )
+            "Sleep" -> Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                SleepScreen()
+            }
 
             "Steps" -> StepCounterScreen(
                 modifier = Modifier.padding(padding)
@@ -122,6 +140,36 @@ fun FitnessApp() {
                 }
             )
         }
+
+        if (showSleepLogDialog) {
+            SleepLogDialog(
+                goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
+                onDismiss = {
+                    showSleepLogDialog = false
+                },
+                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
+
+                    val now = System.currentTimeMillis()
+
+                    SleepRepository.addSleep(
+                        SleepEntry(
+                            id = now.toInt(),
+                            date = SleepDateUtils.formatHistoryDate(now),
+                            sleepHour = sleepHour,
+                            sleepMinute = sleepMinute,
+                            wakeHour = wakeHour,
+                            wakeMinute = wakeMinute,
+                            durationMinutes = durationMinutes,
+                            quality = quality,
+                            notes = notes,
+                            dateMillis = now
+                        )
+                    )
+
+                    showSleepLogDialog = false
+                }
+            )
+        }
     }
 }
 
@@ -130,8 +178,10 @@ fun HomeScreen(
     context: Context,
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
+    sleepDisplay: String?,
     onLogMealClick: () -> Unit,
-    onWorkoutClick: () -> Unit
+    onWorkoutClick: () -> Unit,
+    onLogSleepClick: () -> Unit
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
@@ -160,6 +210,8 @@ fun HomeScreen(
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
     val calorieDisplay = "$totalCalories / $calorieGoal"
+
+    val sleepCardDisplay = sleepDisplay ?: sleep
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
         Color(0xFFFFCDD2)
@@ -212,7 +264,7 @@ fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard(
                 title = "Sleep",
-                value = sleep,
+                value = sleepCardDisplay,
                 modifier = Modifier.weight(1f)
             )
 
@@ -259,7 +311,7 @@ fun HomeScreen(
         }
 
         Button(
-            onClick = {},
+            onClick = onLogSleepClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
