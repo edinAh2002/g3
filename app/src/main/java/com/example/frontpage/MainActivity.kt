@@ -1,22 +1,22 @@
 package com.example.frontpage
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.ui.theme.FrontPageTheme
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.*
-import android.content.Context
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             FrontPageTheme {
                 HomeScreen(this)
@@ -27,26 +27,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen(context: Context) {
-
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
     var calories by remember {
         mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
     }
-
     var workout by remember {
         mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
     }
-
     var sleep by remember {
         mutableStateOf(sharedPreferences.getString("sleep", "7.5h") ?: "7.5h")
     }
-
     var hydration by remember {
         mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
     }
-    var showSettings by remember { mutableStateOf(false) }
 
+    var showSettings by remember { mutableStateOf(false) }
+    var showMedicineWizard by remember { mutableStateOf(false) }
+    var showReminderList by remember { mutableStateOf(false) }
+
+    var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
 
     Scaffold(
         bottomBar = {
@@ -86,8 +86,20 @@ fun HomeScreen(context: Context) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Good morning!", style = MaterialTheme.typography.headlineSmall)
-            Text("Let's crush your goals today! ")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Good morning!", style = MaterialTheme.typography.headlineSmall)
+                    Text("Let's crush your goals today!")
+                }
+                Button(
+                    onClick = { showReminderList = true }
+                ) {
+                    Text("🔔")
+                }
+            }
 
             IconButton(onClick = { showSettings = true }) {
                 Text("⚙️")
@@ -111,7 +123,7 @@ fun HomeScreen(context: Context) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Current Streak")
-                    Text("14 days! ", style = MaterialTheme.typography.headlineMedium)
+                    Text("14 days!", style = MaterialTheme.typography.headlineMedium)
                     Text("Keep it up!")
                 }
             }
@@ -145,10 +157,17 @@ fun HomeScreen(context: Context) {
                     .height(56.dp)
             ) {
                 Text("Log Sleep")
-
-
-
             }
+
+            Button(
+                onClick = { showMedicineWizard = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text("Medicine Reminder")
+            }
+
             if (showSettings) {
                 AlertDialog(
                     onDismissRequest = { showSettings = false },
@@ -180,7 +199,6 @@ fun HomeScreen(context: Context) {
                             )
                         }
                     },
-
                     confirmButton = {
                         TextButton(
                             onClick = {
@@ -197,12 +215,30 @@ fun HomeScreen(context: Context) {
                             Text("Save")
                         }
                     },
-
                     dismissButton = {
                         TextButton(onClick = { showSettings = false }) {
                             Text("Cancel")
                         }
                     }
+                )
+            }
+
+            if (showMedicineWizard) {
+                MedicineWizard(
+                    onClose = { showMedicineWizard = false },
+                    onReminderCreated = { reminder ->
+                        reminders = reminders + reminder
+                    }
+                )
+            }
+
+            if (showReminderList) {
+                ReminderListPopup(
+                    reminders = reminders,
+                    onDeleteReminder = { reminder ->
+                        reminders = reminders - reminder
+                    },
+                    onClose = { showReminderList = false }
                 )
             }
         }
