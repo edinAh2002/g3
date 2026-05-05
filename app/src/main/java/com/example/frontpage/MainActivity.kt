@@ -1,8 +1,17 @@
 package com.example.frontpage
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.ui.theme.FrontPageTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,13 +28,34 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             FrontPageTheme {
-                FitnessApp()
+                HomeScreen(this)
             }
         }
     }
 }
 
 @Composable
+fun HomeScreen(context: Context) {
+    val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
+
+    var calories by remember {
+        mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
+    }
+    var workout by remember {
+        mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
+    }
+    var sleep by remember {
+        mutableStateOf(sharedPreferences.getString("sleep", "7.5h") ?: "7.5h")
+    }
+    var hydration by remember {
+        mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
+    }
+
+    var showSettings by remember { mutableStateOf(false) }
+    var showMedicineWizard by remember { mutableStateOf(false) }
+    var showReminderList by remember { mutableStateOf(false) }
+
+    var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
 fun FitnessApp() {
     var selectedScreen by remember { mutableStateOf("Home") }
 
@@ -93,8 +123,20 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Good morning!", style = MaterialTheme.typography.headlineSmall)
-            Text("Let's crush your goals today! ")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Good morning!", style = MaterialTheme.typography.headlineSmall)
+                    Text("Let's crush your goals today!")
+                }
+                Button(
+                    onClick = { showReminderList = true }
+                ) {
+                    Text("🔔")
+                }
+            }
 
             IconButton(onClick = { showSettings = true }) {
                 Text("⚙️")
@@ -118,7 +160,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Current Streak")
-                    Text("14 days! ", style = MaterialTheme.typography.headlineMedium)
+                    Text("14 days!", style = MaterialTheme.typography.headlineMedium)
                     Text("Keep it up!")
                 }
             }
@@ -152,10 +194,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     .height(56.dp)
             ) {
                 Text("Log Sleep")
-
-
-
             }
+
+            Button(
+                onClick = { showMedicineWizard = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text("Medicine Reminder")
+            }
+
             if (showSettings) {
                 AlertDialog(
                     onDismissRequest = { showSettings = false },
@@ -188,7 +237,18 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { showSettings = false }) {
+                        TextButton(
+                            onClick = {
+                                sharedPreferences.edit()
+                                    .putString("calories", calories)
+                                    .putString("workout", workout)
+                                    .putString("sleep", sleep)
+                                    .putString("hydration", hydration)
+                                    .apply()
+
+                                showSettings = false
+                            }
+                        ) {
                             Text("Save")
                         }
                     },
@@ -197,6 +257,25 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                             Text("Cancel")
                         }
                     }
+                )
+            }
+
+            if (showMedicineWizard) {
+                MedicineWizard(
+                    onClose = { showMedicineWizard = false },
+                    onReminderCreated = { reminder ->
+                        reminders = reminders + reminder
+                    }
+                )
+            }
+
+            if (showReminderList) {
+                ReminderListPopup(
+                    reminders = reminders,
+                    onDeleteReminder = { reminder ->
+                        reminders = reminders - reminder
+                    },
+                    onClose = { showReminderList = false }
                 )
             }
         }
