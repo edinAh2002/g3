@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Fit-tastic"
+rootProject.name = "Front page"
 include(":app")
