@@ -1,0 +1,425 @@
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>plugins {\r\n    alias(libs.plugins.android.application)\r\n}\r\n\r\nandroid {\r\n    namespace = \"com.example.fit_tastic\"\r\n    compileSdk {\r\n        version = release(36) {\r\n            minorApiLevel = 1\r\n        }\r\n    }\r\n\r\n    defaultConfig {\r\n        applicationId = \"com.example.fit_tastic\"\r\n        minSdk = 24\r\n        targetSdk = 36\r\n        versionCode = 1\r\n        versionName = \"1.0\"\r\n\r\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\r\n    }\r\n\r\n    buildTypes {\r\n        release {\r\n            isMinifyEnabled = false\r\n            proguardFiles(\r\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\r\n                \"proguard-rules.pro\"\r\n            )\r\n        }\r\n    }\r\n    compileOptions {\r\n        sourceCompatibility = JavaVersion.VERSION_11\r\n        targetCompatibility = JavaVersion.VERSION_11\r\n    }\r\n}\r\n\r\ndependencies {\r\n    implementation(libs.activity.ktx)\r\n    implementation(libs.appcompat)\r\n    implementation(libs.constraintlayout)\r\n    implementation(libs.material)\r\n    testImplementation(libs.junit)\r\n    androidTestImplementation(libs.espresso.core)\r\n    androidTestImplementation(libs.ext.junit)\r\n\r\n    val roomVersion = \"2.8.4\"\r\n\r\n    implementation(\"androidx.room:room-runtime:$roomVersion\")\r\n    annotationProcessor(\"androidx.room:room-compiler:$roomVersion\")\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/app/build.gradle.kts	(date 1777476107665)
+@@ -1,14 +1,13 @@
+ plugins {
+-    alias(libs.plugins.android.application)
++    id("com.android.application")
++    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
++    alias(libs.plugins.kotlin.android)
+ }
+ 
+ android {
+     namespace = "com.example.fit_tastic"
+-    compileSdk {
+-        version = release(36) {
+-            minorApiLevel = 1
+-        }
+-    }
++
++    compileSdk = 36
+ 
+     defaultConfig {
+         applicationId = "com.example.fit_tastic"
+@@ -29,23 +28,31 @@
+             )
+         }
+     }
++
+     compileOptions {
+         sourceCompatibility = JavaVersion.VERSION_11
+         targetCompatibility = JavaVersion.VERSION_11
+     }
++    kotlinOptions {
++        jvmTarget = "11"
++    }
+ }
+ 
+ dependencies {
+-    implementation(libs.activity.ktx)
+-    implementation(libs.appcompat)
+-    implementation(libs.constraintlayout)
+-    implementation(libs.material)
+-    testImplementation(libs.junit)
+-    androidTestImplementation(libs.espresso.core)
+-    androidTestImplementation(libs.ext.junit)
++    implementation("androidx.core:core-ktx:1.13.1")
++    implementation("androidx.appcompat:appcompat:1.6.1")
++    implementation("com.google.android.material:material:1.10.0")
++    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
++    implementation("androidx.activity:activity-ktx:1.8.0")
++    implementation(libs.core.ktx)
+ 
+     val roomVersion = "2.8.4"
+ 
+     implementation("androidx.room:room-runtime:$roomVersion")
+-    annotationProcessor("androidx.room:room-compiler:$roomVersion")
++    implementation("androidx.room:room-ktx:$roomVersion")
++    ksp("androidx.room:room-compiler:$roomVersion")
++
++    testImplementation("junit:junit:4.13.2")
++    androidTestImplementation("androidx.test.ext:junit:1.1.5")
++    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+ }
+\ No newline at end of file
+Index: .idea/deploymentTargetSelector.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"deploymentTargetSelector\">\r\n    <selectionStates>\r\n      <SelectionState runConfigName=\"app\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DialogSelection />\r\n      </SelectionState>\r\n      <SelectionState runConfigName=\"MainActivity\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DialogSelection />\r\n      </SelectionState>\r\n      <SelectionState runConfigName=\"ExampleInstrumentedTest\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DialogSelection />\r\n      </SelectionState>\r\n      <SelectionState runConfigName=\"MainActivity (1)\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DialogSelection />\r\n      </SelectionState>\r\n      <SelectionState runConfigName=\"MainActivity (2)\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DropdownSelection timestamp=\"2026-04-29T13:11:00.247538200Z\">\r\n          <Target type=\"DEFAULT_BOOT\">\r\n            <handle>\r\n              <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=C:\\Users\\salam\\.android\\avd\\Pixel_8.avd\" />\r\n            </handle>\r\n          </Target>\r\n        </DropdownSelection>\r\n        <DialogSelection />\r\n      </SelectionState>\r\n      <SelectionState runConfigName=\"MainActivity (3)\">\r\n        <option name=\"selectionMode\" value=\"DROPDOWN\" />\r\n        <DropdownSelection timestamp=\"2026-04-29T13:11:00.247538200Z\">\r\n          <Target type=\"DEFAULT_BOOT\">\r\n            <handle>\r\n              <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=C:\\Users\\salam\\.android\\avd\\Pixel_8.avd\" />\r\n            </handle>\r\n          </Target>\r\n        </DropdownSelection>\r\n        <DialogSelection />\r\n      </SelectionState>\r\n    </selectionStates>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/deploymentTargetSelector.xml b/.idea/deploymentTargetSelector.xml
+--- a/.idea/deploymentTargetSelector.xml	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/.idea/deploymentTargetSelector.xml	(date 1777476440299)
+@@ -6,19 +6,33 @@
+         <option name="selectionMode" value="DROPDOWN" />
+         <DialogSelection />
+       </SelectionState>
+-      <SelectionState runConfigName="MainActivity">
++      <SelectionState runConfigName="MainActivity (1)">
+         <option name="selectionMode" value="DROPDOWN" />
+         <DialogSelection />
+       </SelectionState>
+-      <SelectionState runConfigName="ExampleInstrumentedTest">
++      <SelectionState runConfigName="MainActivity (2)">
+         <option name="selectionMode" value="DROPDOWN" />
++        <DropdownSelection timestamp="2026-04-29T13:11:00.247538200Z">
++          <Target type="DEFAULT_BOOT">
++            <handle>
++              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\salam\.android\avd\Pixel_8.avd" />
++            </handle>
++          </Target>
++        </DropdownSelection>
+         <DialogSelection />
+       </SelectionState>
+-      <SelectionState runConfigName="MainActivity (1)">
++      <SelectionState runConfigName="MainActivity (3)">
+         <option name="selectionMode" value="DROPDOWN" />
++        <DropdownSelection timestamp="2026-04-29T13:11:00.247538200Z">
++          <Target type="DEFAULT_BOOT">
++            <handle>
++              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\salam\.android\avd\Pixel_8.avd" />
++            </handle>
++          </Target>
++        </DropdownSelection>
+         <DialogSelection />
+       </SelectionState>
+-      <SelectionState runConfigName="MainActivity (2)">
++      <SelectionState runConfigName="MainActivity (4)">
+         <option name="selectionMode" value="DROPDOWN" />
+         <DropdownSelection timestamp="2026-04-29T13:11:00.247538200Z">
+           <Target type="DEFAULT_BOOT">
+@@ -29,7 +43,7 @@
+         </DropdownSelection>
+         <DialogSelection />
+       </SelectionState>
+-      <SelectionState runConfigName="MainActivity (3)">
++      <SelectionState runConfigName="MoodTrackingActivity">
+         <option name="selectionMode" value="DROPDOWN" />
+         <DropdownSelection timestamp="2026-04-29T13:11:00.247538200Z">
+           <Target type="DEFAULT_BOOT">
+Index: app/src/main/java/com/example/fit_tastic/MainActivity.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MainActivity.kt b/app/src/main/java/com/example/fit_tastic/MainActivity.kt
+new file mode 100644
+--- /dev/null	(date 1777476097954)
++++ b/app/src/main/java/com/example/fit_tastic/MainActivity.kt	(date 1777476097954)
+@@ -0,0 +1,35 @@
++package com.example.fit_tastic
++
++import android.content.Intent
++import android.os.Bundle
++import android.widget.Button
++import androidx.appcompat.app.AppCompatActivity
++import androidx.core.view.ViewCompat
++import androidx.core.view.WindowInsetsCompat
++
++class MainActivity : AppCompatActivity() {
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++
++        setContentView(R.layout.activity_main)
++
++        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { view, insets ->
++            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
++            view.setPadding(
++                systemBars.left,
++                systemBars.top,
++                systemBars.right,
++                systemBars.bottom
++            )
++            insets
++        }
++
++        val openMoodTrackingButton = findViewById<Button>(R.id.openMoodTrackingButton)
++
++        openMoodTrackingButton.setOnClickListener {
++            val intent = Intent(this, MoodTrackingActivity::class.java)
++            startActivity(intent)
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodEntry.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodEntry.kt b/app/src/main/java/com/example/fit_tastic/MoodEntry.kt
+new file mode 100644
+--- /dev/null	(date 1777473411125)
++++ b/app/src/main/java/com/example/fit_tastic/MoodEntry.kt	(date 1777473411125)
+@@ -0,0 +1,24 @@
++package com.example.fit_tastic
++
++import androidx.room.ColumnInfo
++import androidx.room.Entity
++import androidx.room.Index
++import androidx.room.PrimaryKey
++
++@Entity(
++    tableName = "mood_entries",
++    indices = [Index(value = ["date"], unique = true)]
++)
++data class MoodEntry(
++    @PrimaryKey(autoGenerate = true)
++    val id: Int = 0,
++
++    @ColumnInfo(name = "date")
++    val date: String,
++
++    @ColumnInfo(name = "mood_value")
++    val moodValue: Int,
++
++    @ColumnInfo(name = "note")
++    val note: String
++)
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodDao.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodDao.kt b/app/src/main/java/com/example/fit_tastic/MoodDao.kt
+new file mode 100644
+--- /dev/null	(date 1777473455689)
++++ b/app/src/main/java/com/example/fit_tastic/MoodDao.kt	(date 1777473455689)
+@@ -0,0 +1,19 @@
++package com.example.fit_tastic
++
++import androidx.room.Dao
++import androidx.room.Insert
++import androidx.room.OnConflictStrategy
++import androidx.room.Query
++
++@Dao
++interface MoodDao {
++
++    @Insert(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun insertMood(moodEntry: MoodEntry)
++
++    @Query("SELECT * FROM mood_entries ORDER BY date DESC")
++    suspend fun getAllMoodEntries(): List<MoodEntry>
++
++    @Query("SELECT * FROM mood_entries WHERE date = :date LIMIT 1")
++    suspend fun getMoodByDate(date: String): MoodEntry?
++}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/AppDatabase.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/AppDatabase.kt b/app/src/main/java/com/example/fit_tastic/AppDatabase.kt
+new file mode 100644
+--- /dev/null	(date 1777473500017)
++++ b/app/src/main/java/com/example/fit_tastic/AppDatabase.kt	(date 1777473500017)
+@@ -0,0 +1,34 @@
++package com.example.fit_tastic
++
++import android.content.Context
++import androidx.room.Database
++import androidx.room.Room
++import androidx.room.RoomDatabase
++
++@Database(
++    entities = [MoodEntry::class],
++    version = 1,
++    exportSchema = false
++)
++abstract class AppDatabase : RoomDatabase() {
++
++    abstract fun moodDao(): MoodDao
++
++    companion object {
++        @Volatile
++        private var INSTANCE: AppDatabase? = null
++
++        fun getDatabase(context: Context): AppDatabase {
++            return INSTANCE ?: synchronized(this) {
++                val instance = Room.databaseBuilder(
++                    context.applicationContext,
++                    AppDatabase::class.java,
++                    "fittastic_database"
++                ).build()
++
++                INSTANCE = instance
++                instance
++            }
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.kt
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.kt b/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.kt
+new file mode 100644
+--- /dev/null	(date 1777473552242)
++++ b/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.kt	(date 1777473552242)
+@@ -0,0 +1,85 @@
++package com.example.fit_tastic
++
++import android.os.Bundle
++import android.widget.Button
++import android.widget.EditText
++import android.widget.RadioGroup
++import android.widget.Toast
++import androidx.appcompat.app.AppCompatActivity
++import androidx.lifecycle.lifecycleScope
++import kotlinx.coroutines.launch
++import java.text.SimpleDateFormat
++import java.util.Date
++import java.util.Locale
++
++class MoodTrackingActivity : AppCompatActivity() {
++
++    private lateinit var moodRadioGroup: RadioGroup
++    private lateinit var moodNoteEditText: EditText
++    private lateinit var saveMoodButton: Button
++
++    private lateinit var database: AppDatabase
++
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        setContentView(R.layout.activity_mood_tracking)
++
++        moodRadioGroup = findViewById(R.id.moodRadioGroup)
++        moodNoteEditText = findViewById(R.id.moodNoteEditText)
++        saveMoodButton = findViewById(R.id.saveMoodButton)
++
++        database = AppDatabase.getDatabase(this)
++
++        saveMoodButton.setOnClickListener {
++            saveMoodEntry()
++        }
++    }
++
++    private fun saveMoodEntry() {
++        val selectedId = moodRadioGroup.checkedRadioButtonId
++
++        if (selectedId == -1) {
++            Toast.makeText(this, "Please select a mood", Toast.LENGTH_SHORT).show()
++            return
++        }
++
++        val moodValue = getMoodValueFromSelectedId(selectedId)
++        val note = moodNoteEditText.text.toString().trim()
++        val todayDate = getTodayDate()
++
++        val moodEntry = MoodEntry(
++            date = todayDate,
++            moodValue = moodValue,
++            note = note
++        )
++
++        lifecycleScope.launch {
++            database.moodDao().insertMood(moodEntry)
++
++            Toast.makeText(
++                this@MoodTrackingActivity,
++                "Mood saved successfully",
++                Toast.LENGTH_SHORT
++            ).show()
++
++            moodRadioGroup.clearCheck()
++            moodNoteEditText.text.clear()
++        }
++    }
++
++    private fun getMoodValueFromSelectedId(selectedId: Int): Int {
++        return when (selectedId) {
++            R.id.moodVeryBad -> 1
++            R.id.moodBad -> 2
++            R.id.moodOkay -> 3
++            R.id.moodGood -> 4
++            R.id.moodGreat -> 5
++            else -> 0
++        }
++    }
++
++    private fun getTodayDate(): String {
++        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
++        return formatter.format(Date())
++    }
++}
+\ No newline at end of file
+Index: gradle/libs.versions.toml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[versions]\r\nagp = \"9.2.0\"\r\njunit = \"4.13.2\"\r\njunitVersion = \"1.1.5\"\r\nespressoCore = \"3.5.1\"\r\nappcompat = \"1.6.1\"\r\nmaterial = \"1.10.0\"\r\nactivityKtx = \"1.8.0\"\r\nconstraintlayout = \"2.1.4\"\r\n\r\n[libraries]\r\njunit = { group = \"junit\", name = \"junit\", version.ref = \"junit\" }\r\next-junit = { group = \"androidx.test.ext\", name = \"junit\", version.ref = \"junitVersion\" }\r\nespresso-core = { group = \"androidx.test.espresso\", name = \"espresso-core\", version.ref = \"espressoCore\" }\r\nappcompat = { group = \"androidx.appcompat\", name = \"appcompat\", version.ref = \"appcompat\" }\r\nmaterial = { group = \"com.google.android.material\", name = \"material\", version.ref = \"material\" }\r\nactivity-ktx = { group = \"androidx.activity\", name = \"activity-ktx\", version.ref = \"activityKtx\" }\r\nconstraintlayout = { group = \"androidx.constraintlayout\", name = \"constraintlayout\", version.ref = \"constraintlayout\" }\r\n\r\n[plugins]\r\nandroid-application = { id = \"com.android.application\", version.ref = \"agp\" }\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+--- a/gradle/libs.versions.toml	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/gradle/libs.versions.toml	(date 1777476107481)
+@@ -1,5 +1,6 @@
+ [versions]
+ agp = "9.2.0"
++kotlin = "2.0.21"
+ junit = "4.13.2"
+ junitVersion = "1.1.5"
+ espressoCore = "3.5.1"
+@@ -7,6 +8,7 @@
+ material = "1.10.0"
+ activityKtx = "1.8.0"
+ constraintlayout = "2.1.4"
++coreKtx = "1.18.0"
+ 
+ [libraries]
+ junit = { group = "junit", name = "junit", version.ref = "junit" }
+@@ -16,7 +18,8 @@
+ material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+ activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
++core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+ 
+ [plugins]
+ android-application = { id = "com.android.application", version.ref = "agp" }
+-
++kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+\ No newline at end of file
+Index: app/src/main/res/layout/activity_main.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<androidx.constraintlayout.widget.ConstraintLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\r\n    xmlns:app=\"http://schemas.android.com/apk/res-auto\"\r\n    xmlns:tools=\"http://schemas.android.com/tools\"\r\n    android:id=\"@+id/main\"\r\n    android:layout_width=\"match_parent\"\r\n    android:layout_height=\"match_parent\"\r\n    tools:context=\".MainActivity\">\r\n\r\n    <Button\r\n        android:id=\"@+id/openMoodTrackingButton\"\r\n        android:layout_width=\"wrap_content\"\r\n        android:layout_height=\"wrap_content\"\r\n        android:text=\"Track Mood\"\r\n        app:layout_constraintTop_toTopOf=\"parent\"\r\n        app:layout_constraintBottom_toBottomOf=\"parent\"\r\n        app:layout_constraintStart_toStartOf=\"parent\"\r\n        app:layout_constraintEnd_toEndOf=\"parent\" />\r\n    <TextView\r\n        android:layout_width=\"wrap_content\"\r\n        android:layout_height=\"wrap_content\"\r\n        android:text=\"Hello World!\"\r\n        app:layout_constraintBottom_toBottomOf=\"parent\"\r\n        app:layout_constraintEnd_toEndOf=\"parent\"\r\n        app:layout_constraintStart_toStartOf=\"parent\"\r\n        app:layout_constraintTop_toTopOf=\"parent\" />\r\n\r\n</androidx.constraintlayout.widget.ConstraintLayout>
+===================================================================
+diff --git a/app/src/main/res/layout/activity_main.xml b/app/src/main/res/layout/activity_main.xml
+--- a/app/src/main/res/layout/activity_main.xml	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/app/src/main/res/layout/activity_main.xml	(date 1777476333616)
+@@ -9,13 +9,9 @@
+ 
+     <Button
+         android:id="@+id/openMoodTrackingButton"
+-        android:layout_width="wrap_content"
++        android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+-        android:text="Track Mood"
+-        app:layout_constraintTop_toTopOf="parent"
+-        app:layout_constraintBottom_toBottomOf="parent"
+-        app:layout_constraintStart_toStartOf="parent"
+-        app:layout_constraintEnd_toEndOf="parent" />
++        android:text="Track Mood" />
+     <TextView
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
