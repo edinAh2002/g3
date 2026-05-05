@@ -12,61 +12,82 @@ import com.example.frontpage.ui.theme.FrontPageTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import com.example.frontpage.stepcounter.StepCounterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             FrontPageTheme {
-                HomeScreen()
+                FitnessApp()
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen() {
+fun FitnessApp() {
+    var selectedScreen by remember { mutableStateOf("Home") }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = selectedScreen == "Home",
+                    onClick = { selectedScreen = "Home" },
+                    label = { Text("Home") },
+                    icon = { Text("🏠") }
+                )
+                NavigationBarItem(
+                    selected = selectedScreen == "Workout",
+                    onClick = { selectedScreen = "Workout" },
+                    label = { Text("Workout") },
+                    icon = { Text("🏃") }
+                )
+                NavigationBarItem(
+                    selected = selectedScreen == "Nutrition",
+                    onClick = { selectedScreen = "Nutrition" },
+                    label = { Text("Nutrition") },
+                    icon = { Text("🥗") }
+                )
+                NavigationBarItem(
+                    selected = selectedScreen == "Sleep",
+                    onClick = { selectedScreen = "Sleep" },
+                    label = { Text("Sleep") },
+                    icon = { Text("🌙") }
+                )
+                NavigationBarItem(
+                    selected = selectedScreen == "Steps",
+                    onClick = { selectedScreen = "Steps" },
+                    label = { Text("Steps") },
+                    icon = { Text("🏃") }
+                )
+            }
+        }
+    ) { padding ->
+        when (selectedScreen) {
+            "Home" -> HomeScreen(Modifier.padding(padding))
+            "Workout" -> PlaceholderScreen("Workout", Modifier.padding(padding))
+            "Nutrition" -> PlaceholderScreen("Nutrition", Modifier.padding(padding))
+            "Sleep" -> PlaceholderScreen("Sleep", Modifier.padding(padding))
+            "Steps" -> StepCounterScreen(Modifier.padding(padding))
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(modifier: Modifier = Modifier) {
 
     var calories by remember { mutableStateOf("1,850") }
     var workout by remember { mutableStateOf("45 min") }
     var sleep by remember { mutableStateOf("7.5h") }
     var hydration by remember { mutableStateOf("6 cups") }
     var showSettings by remember { mutableStateOf(false) }
+    var selectedScreen by remember { mutableStateOf("Home") }
 
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    label = { Text("Home") },
-                    icon = { Text("🏠") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    label = { Text("Workout") },
-                    icon = { Text("🏃") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    label = { Text("Nutrition") },
-                    icon = { Text("🥗") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    label = { Text("Sleep") },
-                    icon = { Text("🌙") }
-                )
-            }
-        }
-    ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
                 .fillMaxSize(),
@@ -180,7 +201,7 @@ fun HomeScreen() {
             }
         }
     }
-}
+
 
 @Composable
 fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
@@ -189,5 +210,17 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall)
         }
+    }
+}
+
+@Composable
+fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .fillMaxSize()
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text("Coming soon.")
     }
 }
