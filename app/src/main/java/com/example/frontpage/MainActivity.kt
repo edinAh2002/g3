@@ -4,15 +4,37 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.frontpage.mood.ui.MoodFeature
 import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepCalculator
@@ -23,6 +45,16 @@ import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+
+private enum class AppScreen {
+    Home,
+    Workout,
+    Nutrition,
+    Sleep,
+    Steps,
+    MoodLog,
+    MoodTracking
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +70,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FitnessApp() {
-    var selectedScreen by remember { mutableStateOf("Home") }
+    var selectedScreen by remember { mutableStateOf(AppScreen.Home) }
     val context = LocalContext.current
 
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
@@ -54,80 +86,115 @@ fun FitnessApp() {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = selectedScreen == "Home",
-                    onClick = { selectedScreen = "Home" },
+                    selected = selectedScreen == AppScreen.Home,
+                    onClick = { selectedScreen = AppScreen.Home },
                     label = { Text("Home") },
                     icon = { Text("🏠") }
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == "Workout",
-                    onClick = { selectedScreen = "Workout" },
+                    selected = selectedScreen == AppScreen.Workout,
+                    onClick = { selectedScreen = AppScreen.Workout },
                     label = { Text("Workout") },
                     icon = { Text("🏃") }
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == "Nutrition",
-                    onClick = { selectedScreen = "Nutrition" },
+                    selected = selectedScreen == AppScreen.Nutrition,
+                    onClick = { selectedScreen = AppScreen.Nutrition },
                     label = { Text("Nutrition") },
                     icon = { Text("🥗") }
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == "Sleep",
-                    onClick = { selectedScreen = "Sleep" },
+                    selected = selectedScreen == AppScreen.Sleep,
+                    onClick = { selectedScreen = AppScreen.Sleep },
                     label = { Text("Sleep") },
                     icon = { Text("🌙") }
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == "Steps",
-                    onClick = { selectedScreen = "Steps" },
+                    selected = selectedScreen == AppScreen.Steps,
+                    onClick = { selectedScreen = AppScreen.Steps },
                     label = { Text("Steps") },
                     icon = { Text("👣") }
+                )
+
+                NavigationBarItem(
+                    selected = selectedScreen == AppScreen.MoodLog ||
+                            selectedScreen == AppScreen.MoodTracking,
+                    onClick = { selectedScreen = AppScreen.MoodLog },
+                    label = { Text("Mood") },
+                    icon = { Text("🙂") }
                 )
             }
         }
     ) { padding ->
+
         when (selectedScreen) {
-            "Home" -> HomeScreen(
-                context = context,
-                modifier = Modifier.padding(padding),
-                foodItems = foodItems,
-                sleepDisplay = sleepDisplay,
-                onLogMealClick = { showFoodLogging = true },
-                onWorkoutClick = { selectedScreen = "Workout" },
-                onLogSleepClick = { showSleepLogDialog = true }
-            )
+            AppScreen.Home -> {
+                HomeScreen(
+                    context = context,
+                    modifier = Modifier.padding(padding),
+                    foodItems = foodItems,
+                    sleepDisplay = sleepDisplay,
+                    onLogMealClick = { showFoodLogging = true },
+                    onWorkoutClick = { selectedScreen = AppScreen.Workout },
+                    onLogSleepClick = { showSleepLogDialog = true },
+                    onLogMoodClick = { selectedScreen = AppScreen.MoodTracking }
+                )
+            }
 
-            "Workout" -> WorkoutScreen()
+            AppScreen.Workout -> {
+                WorkoutScreen()
+            }
 
-            "Nutrition" -> NutritionScreen(
-                padding = padding,
-                foodItems = foodItems,
-                onBackToHome = {
-                    selectedScreen = "Home"
-                },
-                onLogMealClick = {
-                    showFoodLogging = true
-                },
-                onDeleteFood = { foodToDelete ->
-                    foodItems = foodItems - foodToDelete
-                }
-            )
+            AppScreen.Nutrition -> {
+                NutritionScreen(
+                    padding = padding,
+                    foodItems = foodItems,
+                    onBackToHome = {
+                        selectedScreen = AppScreen.Home
+                    },
+                    onLogMealClick = {
+                        showFoodLogging = true
+                    },
+                    onDeleteFood = { foodToDelete ->
+                        foodItems = foodItems - foodToDelete
+                    }
+                )
+            }
 
-            "Sleep" -> Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
+            AppScreen.Sleep -> {
                 SleepScreen()
             }
 
-            "Steps" -> StepCounterScreen(
-                modifier = Modifier.padding(padding)
-            )
+            AppScreen.Steps -> {
+                StepCounterScreen(
+                    modifier = Modifier.padding(padding)
+                )
+            }
+
+            AppScreen.MoodLog -> {
+                MoodFeature.LogRoute(
+                    modifier = Modifier.padding(padding),
+                    onLogNewMood = {
+                        selectedScreen = AppScreen.MoodTracking
+                    }
+                )
+            }
+
+            AppScreen.MoodTracking -> {
+                MoodFeature.TrackingRoute(
+                    modifier = Modifier.padding(padding),
+                    onSaved = {
+                        selectedScreen = AppScreen.MoodLog
+                    },
+                    onBack = {
+                        selectedScreen = AppScreen.MoodLog
+                    }
+                )
+            }
         }
 
         if (showFoodLogging) {
@@ -181,7 +248,8 @@ fun HomeScreen(
     sleepDisplay: String?,
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
-    onLogSleepClick: () -> Unit
+    onLogSleepClick: () -> Unit,
+    onLogMoodClick: () -> Unit
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
@@ -275,6 +343,12 @@ fun HomeScreen(
             )
         }
 
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MoodFeature.HomeSummaryCard(
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -310,13 +384,24 @@ fun HomeScreen(
             }
         }
 
-        Button(
-            onClick = onLogSleepClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text("Log Sleep")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = onLogSleepClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+            ) {
+                Text("Log Sleep")
+            }
+
+            Button(
+                onClick = onLogMoodClick,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+            ) {
+                Text("Log Mood")
+            }
         }
 
         Button(
@@ -421,20 +506,5 @@ fun StatCard(
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall)
         }
-    }
-}
-
-@Composable
-fun PlaceholderScreen(
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxSize()
-    ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        Text("Coming soon.")
     }
 }
