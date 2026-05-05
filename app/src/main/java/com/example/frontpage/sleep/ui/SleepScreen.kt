@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -22,31 +19,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.ui.components.SleepConsistencyCard
-import com.example.frontpage.sleep.ui.components.SleepFeedbackCard
-import com.example.frontpage.sleep.ui.components.SleepHistoryCard
-import com.example.frontpage.sleep.ui.components.SleepHistoryFilterRow
-import com.example.frontpage.sleep.ui.components.SleepStatCard
-import com.example.frontpage.sleep.ui.components.SleepTrendsCard
 import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepHistoryFilter
-import com.example.frontpage.sleep.ui.components.WeeklySleepChart
-import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
+import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
+import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
+import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
+import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
+
+private enum class SleepPage(
+    val label: String
+) {
+    Overview("Overview"),
+    History("History"),
+    Insights("Insights"),
+    Settings("Settings")
+}
 
 @Composable
-fun SleepScreen() {
+fun SleepScreen(
+    modifier: Modifier = Modifier
+) {
+    var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
+
     var showSleepLogDialog by remember { mutableStateOf(false) }
+    var showGoalDialog by remember { mutableStateOf(false) }
+
     var sleepLogs by remember { mutableStateOf(SleepRepository.getAllSleepLogs().toList()) }
     var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
     var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
-    val latestSleep = sleepLogs.lastOrNull()
     var goalMinutes by remember { mutableStateOf(SleepSettingsRepository.sleepGoalMinutes) }
-    var showGoalDialog by remember { mutableStateOf(false) }
+
+    val latestSleep = sleepLogs.lastOrNull()
 
     val averageSleepMinutes = if (sleepLogs.isEmpty()) {
         0
@@ -56,6 +65,7 @@ fun SleepScreen() {
 
     val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
     val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
+
     val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
 
     val averageBedtimeMinutes = SleepCalculator.calculateAverageBedtimeMinutes(sleepLogs)
@@ -87,7 +97,7 @@ fun SleepScreen() {
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .padding(16.dp)
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
@@ -98,179 +108,67 @@ fun SleepScreen() {
             style = MaterialTheme.typography.headlineSmall
         )
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Latest Sleep", style = MaterialTheme.typography.titleMedium)
+        SleepPageNavigation(
+            selectedPage = selectedPage,
+            onPageSelected = { selectedPage = it }
+        )
 
-                if (latestSleep == null) {
-                    Text("No sleep logged yet.")
-                    Text("Tap Log Sleep to add your first sleep entry.")
-
-                    OutlinedButton(
-                        onClick = { showGoalDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Edit Sleep Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
+        when (selectedPage) {
+            SleepPage.Overview -> {
+                SleepOverviewPage(
+                    latestSleep = latestSleep,
+                    goalMinutes = goalMinutes,
+                    averageSleepMinutes = averageSleepMinutes,
+                    longestSleepMinutes = longestSleepMinutes,
+                    shortestSleepMinutes = shortestSleepMinutes,
+                    totalLogs = sleepLogs.size,
+                    weeklyChartData = weeklyChartData,
+                    onLogSleepClick = {
+                        editingEntry = null
+                        showSleepLogDialog = true
+                    },
+                    onEditGoalClick = {
+                        showGoalDialog = true
                     }
-                } else {
-                    Text(
-                        text = SleepDateUtils.formatHistoryDate(latestSleep.dateMillis),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Text(
-                        text = SleepCalculator.formatDuration(latestSleep.durationMinutes),
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-
-                    Text(
-                        text = "From ${SleepCalculator.formatTime(latestSleep.sleepHour, latestSleep.sleepMinute)} to ${SleepCalculator.formatTime(latestSleep.wakeHour, latestSleep.wakeMinute)}"
-                    )
-
-                    Text("Quality: ${latestSleep.quality}")
-
-                    LinearProgressIndicator(
-                        progress = {
-                            SleepCalculator.calculateGoalProgress(
-                                durationMinutes = latestSleep.durationMinutes,
-                                goalMinutes = goalMinutes
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
-
-                    SleepFeedbackCard(
-                        durationMinutes = latestSleep.durationMinutes,
-                        goalMinutes = goalMinutes
-                    )
-
-                    OutlinedButton(
-                        onClick = { showGoalDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Edit Sleep Goal")
-                    }
-                }
+                )
             }
-        }
 
-        Button(
-            onClick = {
-                editingEntry = null
-                showSleepLogDialog = true
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Log Sleep")
-        }
-
-        Text(
-            text = "Sleep Statistics",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Average",
-                value = SleepCalculator.formatDuration(averageSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Logs",
-                value = sleepLogs.size.toString(),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Longest",
-                value = SleepCalculator.formatDuration(longestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Shortest",
-                value = SleepCalculator.formatDuration(shortestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Text(
-            text = "Weekly Sleep Chart",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        WeeklySleepChart(
-            chartData = weeklyChartData,
-            goalMinutes = goalMinutes
-        )
-
-        Text(
-            text = "Bedtime & Wake-Up Trends",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        SleepTrendsCard(
-            sleepLogs = sleepLogs,
-            averageBedtimeMinutes = averageBedtimeMinutes,
-            averageWakeTimeMinutes = averageWakeTimeMinutes,
-            averageDurationMinutes = averageSleepMinutes
-        )
-
-        Text(
-            text = "Sleep Consistency - Last 7 Days",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        SleepConsistencyCard(
-            variationMinutes = sleepConsistencyVariationMinutes,
-            durationRangeMinutes = sleepDurationRangeMinutes,
-            logCount = last7DaysSleepLogs.size
-        )
-
-        Text(
-            text = "Sleep History",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        SleepHistoryFilterRow(
-            selectedFilter = selectedHistoryFilter,
-            onFilterSelected = { selectedHistoryFilter = it }
-        )
-
-        if (sleepLogs.isEmpty()) {
-            Text("Your sleep history will appear here.")
-        } else if (filteredSleepLogs.isEmpty()) {
-            Text("No sleep logs found for this filter.")
-        } else {
-            filteredSleepLogs.reversed().forEach { entry ->
-                SleepHistoryCard(
-                    entry = entry,
-                    onEdit = {
+            SleepPage.History -> {
+                SleepHistoryPage(
+                    sleepLogs = sleepLogs,
+                    filteredSleepLogs = filteredSleepLogs,
+                    selectedHistoryFilter = selectedHistoryFilter,
+                    onFilterSelected = { selectedHistoryFilter = it },
+                    onEditEntry = { entry ->
                         editingEntry = entry
                         showSleepLogDialog = true
                     },
-                    onDelete = {
+                    onDeleteEntry = { entry ->
                         SleepRepository.deleteSleep(entry.id)
                         sleepLogs = SleepRepository.getAllSleepLogs().toList()
+                    }
+                )
+            }
+
+            SleepPage.Insights -> {
+                SleepInsightsPage(
+                    sleepLogs = sleepLogs,
+                    averageSleepMinutes = averageSleepMinutes,
+                    longestSleepMinutes = longestSleepMinutes,
+                    shortestSleepMinutes = shortestSleepMinutes,
+                    averageBedtimeMinutes = averageBedtimeMinutes,
+                    averageWakeTimeMinutes = averageWakeTimeMinutes,
+                    sleepConsistencyVariationMinutes = sleepConsistencyVariationMinutes,
+                    sleepDurationRangeMinutes = sleepDurationRangeMinutes,
+                    consistencyLogCount = last7DaysSleepLogs.size
+                )
+            }
+
+            SleepPage.Settings -> {
+                SleepSettingsPage(
+                    goalMinutes = goalMinutes,
+                    onEditGoalClick = {
+                        showGoalDialog = true
                     }
                 )
             }
@@ -337,5 +235,79 @@ fun SleepScreen() {
                 showGoalDialog = false
             }
         )
+    }
+}
+
+@Composable
+private fun SleepPageNavigation(
+    selectedPage: SleepPage,
+    onPageSelected: (SleepPage) -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepPageButton(
+                page = SleepPage.Overview,
+                selectedPage = selectedPage,
+                onPageSelected = onPageSelected,
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepPageButton(
+                page = SleepPage.History,
+                selectedPage = selectedPage,
+                onPageSelected = onPageSelected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepPageButton(
+                page = SleepPage.Insights,
+                selectedPage = selectedPage,
+                onPageSelected = onPageSelected,
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepPageButton(
+                page = SleepPage.Settings,
+                selectedPage = selectedPage,
+                onPageSelected = onPageSelected,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SleepPageButton(
+    page: SleepPage,
+    selectedPage: SleepPage,
+    onPageSelected: (SleepPage) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSelected = page == selectedPage
+
+    if (isSelected) {
+        Button(
+            onClick = { onPageSelected(page) },
+            modifier = modifier
+        ) {
+            Text(page.label)
+        }
+    } else {
+        OutlinedButton(
+            onClick = { onPageSelected(page) },
+            modifier = modifier
+        ) {
+            Text(page.label)
+        }
     }
 }

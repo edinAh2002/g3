@@ -166,7 +166,9 @@ fun FitnessApp() {
             }
 
             AppScreen.Sleep -> {
-                SleepScreen()
+                SleepScreen(
+                    modifier = Modifier.padding(padding)
+                )
             }
 
             AppScreen.Steps -> {
