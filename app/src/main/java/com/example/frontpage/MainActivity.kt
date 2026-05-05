@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
+import com.example.frontpage.workout.ui.WorkoutScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,10 +79,7 @@ fun FitnessApp() {
                 modifier = Modifier.padding(padding)
             )
 
-            "Workout" -> PlaceholderScreen(
-                title = "Workout",
-                modifier = Modifier.padding(padding)
-            )
+            "Workout" -> WorkoutScreen()
 
             "Nutrition" -> PlaceholderScreen(
                 title = "Nutrition",
