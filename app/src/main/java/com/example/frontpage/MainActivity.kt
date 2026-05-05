@@ -12,6 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.ui.theme.FrontPageTheme
+import com.example.frontpage.ui.theme.FrontPageTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.*
+import com.example.frontpage.stepcounter.StepCounterScreen
+import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,40 +56,68 @@ fun HomeScreen(context: Context) {
     var showReminderList by remember { mutableStateOf(false) }
 
     var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
+fun FitnessApp() {
+    var selectedScreen by remember { mutableStateOf("Home") }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = true,
-                    onClick = {},
+                    selected = selectedScreen == "Home",
+                    onClick = { selectedScreen = "Home" },
                     label = { Text("Home") },
                     icon = { Text("🏠") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = {},
+                    selected = selectedScreen == "Workout",
+                    onClick = { selectedScreen = "Workout" },
                     label = { Text("Workout") },
                     icon = { Text("🏃") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = {},
+                    selected = selectedScreen == "Nutrition",
+                    onClick = { selectedScreen = "Nutrition" },
                     label = { Text("Nutrition") },
                     icon = { Text("🥗") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = {},
+                    selected = selectedScreen == "Sleep",
+                    onClick = { selectedScreen = "Sleep" },
                     label = { Text("Sleep") },
                     icon = { Text("🌙") }
+                )
+                NavigationBarItem(
+                    selected = selectedScreen == "Steps",
+                    onClick = { selectedScreen = "Steps" },
+                    label = { Text("Steps") },
+                    icon = { Text("🏃") }
                 )
             }
         }
     ) { padding ->
+        when (selectedScreen) {
+            "Home" -> HomeScreen(Modifier.padding(padding))
+            "Workout" -> PlaceholderScreen("Workout", Modifier.padding(padding))
+            "Nutrition" -> PlaceholderScreen("Nutrition", Modifier.padding(padding))
+            "Sleep" -> PlaceholderScreen("Sleep", Modifier.padding(padding))
+            "Steps" -> StepCounterScreen(Modifier.padding(padding))
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(modifier: Modifier = Modifier) {
+
+    var calories by remember { mutableStateOf("1,850") }
+    var workout by remember { mutableStateOf("45 min") }
+    var sleep by remember { mutableStateOf("7.5h") }
+    var hydration by remember { mutableStateOf("6 cups") }
+    var showSettings by remember { mutableStateOf(false) }
+    var selectedScreen by remember { mutableStateOf("Home") }
+
+
         Column(
             modifier = Modifier
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
                 .fillMaxSize(),
@@ -243,7 +280,7 @@ fun HomeScreen(context: Context) {
             }
         }
     }
-}
+
 
 @Composable
 fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
@@ -252,5 +289,17 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall)
         }
+    }
+}
+
+@Composable
+fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .fillMaxSize()
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text("Coming soon.")
     }
 }
