@@ -54,8 +54,7 @@ private enum class AppScreen {
     Nutrition,
     Sleep,
     Steps,
-    MoodLog,
-    MoodTracking
+    Mood
 }
 
 class MainActivity : ComponentActivity() {
@@ -79,6 +78,7 @@ fun FitnessApp() {
     var showFoodLogging by remember { mutableStateOf(false) }
     var showSleepLogDialog by remember { mutableStateOf(false) }
 
+    val moodController = MoodFeature.rememberController()
     val sleepViewModel: SleepViewModel = viewModel()
     val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
 
@@ -119,9 +119,8 @@ fun FitnessApp() {
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == AppScreen.MoodLog ||
-                            selectedScreen == AppScreen.MoodTracking,
-                    onClick = { selectedScreen = AppScreen.MoodLog },
+                    selected = selectedScreen == AppScreen.Mood,
+                    onClick = { selectedScreen = AppScreen.Mood },
                     label = { Text("Mood") },
                     icon = { Text("🙂") }
                 )
@@ -146,7 +145,9 @@ fun FitnessApp() {
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
                     onLogSleepClick = { showSleepLogDialog = true },
-                    onLogMoodClick = { selectedScreen = AppScreen.MoodTracking }
+                    onLogMoodClick = {
+                        moodController.openTrackingDialog()
+                    }
                 )
             }
 
@@ -183,24 +184,10 @@ fun FitnessApp() {
                 )
             }
 
-            AppScreen.MoodLog -> {
-                MoodFeature.LogRoute(
+            AppScreen.Mood -> {
+                MoodFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    onLogNewMood = {
-                        selectedScreen = AppScreen.MoodTracking
-                    }
-                )
-            }
-
-            AppScreen.MoodTracking -> {
-                MoodFeature.TrackingRoute(
-                    modifier = Modifier.padding(padding),
-                    onSaved = {
-                        selectedScreen = AppScreen.MoodLog
-                    },
-                    onBack = {
-                        selectedScreen = AppScreen.MoodLog
-                    }
+                    controller = moodController
                 )
             }
         }
@@ -215,6 +202,10 @@ fun FitnessApp() {
                 }
             )
         }
+
+        MoodFeature.DialogHost(
+            controller = moodController
+        )
 
         if (showSleepLogDialog) {
             SleepLogDialog(
