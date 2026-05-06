@@ -3,28 +3,51 @@ package com.example.frontpage.sleep
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.model.SleepEntry
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SleepViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
     private val repository: SleepRepository
+    private val authRepository: AuthRepository
+
+    private val currentUserId = MutableStateFlow<Long?>(null)
 
     val sleepLogs: StateFlow<List<SleepEntry>>
 
     init {
         val database = AppDatabase.getDatabase(application)
+
         repository = SleepRepository(database.sleepDao())
 
-        sleepLogs = repository
-            .getAllSleepLogs()
+        authRepository = AuthRepository(
+            userDao = database.userDao(),
+            context = application.applicationContext
+        )
+
+        currentUserId.value = authRepository.getCurrentUserId()
+
+        sleepLogs = currentUserId
+            .flatMapLatest { userId ->
+                if (userId == null) {
+                    flowOf(emptyList())
+                } else {
+                    repository.getSleepLogsForUser(userId)
+                }
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
@@ -32,27 +55,54 @@ class SleepViewModel(
             )
     }
 
+    fun refreshCurrentUser() {
+        currentUserId.value = authRepository.getCurrentUserId()
+    }
+
+    private fun getCurrentUserIdOrRefresh(): Long? {
+        val userId = authRepository.getCurrentUserId()
+        currentUserId.value = userId
+        return userId
+    }
+
     fun addSleep(entry: SleepEntry) {
         viewModelScope.launch {
-            repository.addSleep(entry)
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.addSleep(
+                userId = userId,
+                entry = entry
+            )
         }
     }
 
     fun updateSleep(entry: SleepEntry) {
         viewModelScope.launch {
-            repository.updateSleep(entry)
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.updateSleep(
+                userId = userId,
+                entry = entry
+            )
         }
     }
 
     fun deleteSleep(id: Long) {
         viewModelScope.launch {
-            repository.deleteSleep(id)
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.deleteSleep(
+                userId = userId,
+                id = id
+            )
         }
     }
 
     fun clearAllLogs() {
         viewModelScope.launch {
-            repository.clearAllLogs()
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.clearAllLogs(userId)
         }
     }
 }
