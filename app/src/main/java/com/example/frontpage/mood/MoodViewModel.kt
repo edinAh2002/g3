@@ -3,6 +3,7 @@ package com.example.frontpage.mood
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.data.MoodRepository
 import com.example.frontpage.mood.domain.MoodDateUtils
@@ -22,6 +23,9 @@ import kotlinx.coroutines.launch
 class MoodViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MoodRepository
+    private val authRepository: AuthRepository
+
+    private val currentUserId = MutableStateFlow<Long?>(null)
 
     private val _allMoodEntries = MutableStateFlow<List<MoodEntry>>(emptyList())
     val allMoodEntries: StateFlow<List<MoodEntry>> = _allMoodEntries.asStateFlow()
@@ -49,9 +53,28 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         val database = AppDatabase.getDatabase(application)
+
         repository = MoodRepository(database.moodDao())
 
+        authRepository = AuthRepository(
+            userDao = database.userDao(),
+            context = application.applicationContext
+        )
+
+        currentUserId.value = authRepository.getCurrentUserId()
+
         loadMoods()
+    }
+
+    fun refreshCurrentUser() {
+        currentUserId.value = authRepository.getCurrentUserId()
+        loadMoods()
+    }
+
+    private fun getCurrentUserIdOrRefresh(): Long? {
+        val userId = authRepository.getCurrentUserId()
+        currentUserId.value = userId
+        return userId
     }
 
     fun loadMoods() {
@@ -109,18 +132,34 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh()
+
+            if (userId == null) {
+                _trackingState.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = "Please log in before saving your mood."
+                    )
+                }
+                return@launch
+            }
+
             _trackingState.update {
                 it.copy(isSaving = true, errorMessage = null)
             }
 
             val moodEntry = MoodEntry(
+                userId = userId,
                 date = MoodDateUtils.getTodayDate(),
                 time = MoodDateUtils.getCurrentTime(),
                 moodValue = currentState.selectedMood,
                 note = currentState.note.trim()
             )
 
-            repository.addMood(moodEntry)
+            repository.addMood(
+                userId = userId,
+                moodEntry = moodEntry
+            )
 
             refreshMoodData()
 
@@ -129,37 +168,63 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
             onSuccess()
         }
     }
+
     fun resetTrackingForm() {
         _trackingState.value = MoodTrackingUiState()
     }
+
     fun updateExistingMood(
         moodEntry: MoodEntry,
         newMoodValue: Int,
         newNote: String
     ) {
         viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
             val updatedMood = moodEntry.copy(
+                userId = userId,
                 moodValue = newMoodValue,
                 note = newNote.trim()
             )
 
-            repository.updateMood(updatedMood)
+            repository.updateMood(
+                userId = userId,
+                moodEntry = updatedMood
+            )
+
             refreshMoodData()
         }
     }
 
     fun deleteMood(moodEntry: MoodEntry) {
         viewModelScope.launch {
-            repository.deleteMood(moodEntry)
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.deleteMood(
+                userId = userId,
+                moodEntry = moodEntry
+            )
+
             refreshMoodData()
         }
     }
 
     private suspend fun refreshMoodData() {
-        val entries = repository.getAllMoods()
+        val userId = getCurrentUserIdOrRefresh()
+
+        if (userId == null) {
+            _allMoodEntries.value = emptyList()
+            _filteredMoodEntries.value = emptyList()
+            _latestMood.value = null
+            _averageMood.value = null
+            _filteredAverageMood.value = null
+            return
+        }
+
+        val entries = repository.getAllMoods(userId)
 
         _allMoodEntries.value = entries
-        _latestMood.value = repository.getLatestMood()
+        _latestMood.value = repository.getLatestMood(userId)
         _averageMood.value = MoodStatsCalculator.getAverageMood(entries)
 
         applyFilters()

@@ -9,6 +9,9 @@ data class MoodEntry(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
 
+    @ColumnInfo(name = "userId", defaultValue = "0")
+    val userId: Long = 0L,
+
     @ColumnInfo(name = "date")
     val date: String,
 
