@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.mood.ui.MoodFeature
-import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
@@ -45,6 +44,9 @@ import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.sleep.SleepViewModel
 
 private enum class AppScreen {
     Home,
@@ -52,8 +54,7 @@ private enum class AppScreen {
     Nutrition,
     Sleep,
     Steps,
-    MoodLog,
-    MoodTracking
+    Mood
 }
 
 class MainActivity : ComponentActivity() {
@@ -77,7 +78,11 @@ fun FitnessApp() {
     var showFoodLogging by remember { mutableStateOf(false) }
     var showSleepLogDialog by remember { mutableStateOf(false) }
 
-    val latestSleep = SleepRepository.getLatestSleep()
+    val moodController = MoodFeature.rememberController()
+    val sleepViewModel: SleepViewModel = viewModel()
+    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
+
+    val latestSleep = sleepLogs.lastOrNull()
     val sleepDisplay = latestSleep?.let {
         SleepCalculator.formatDuration(it.durationMinutes)
     }
@@ -100,20 +105,6 @@ fun FitnessApp() {
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Nutrition,
-                    onClick = { selectedScreen = AppScreen.Nutrition },
-                    label = { Text("Nutrition") },
-                    icon = { Text("🥗") }
-                )
-
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Sleep,
-                    onClick = { selectedScreen = AppScreen.Sleep },
-                    label = { Text("Sleep") },
-                    icon = { Text("🌙") }
-                )
-
-                NavigationBarItem(
                     selected = selectedScreen == AppScreen.Steps,
                     onClick = { selectedScreen = AppScreen.Steps },
                     label = { Text("Steps") },
@@ -121,11 +112,24 @@ fun FitnessApp() {
                 )
 
                 NavigationBarItem(
-                    selected = selectedScreen == AppScreen.MoodLog ||
-                            selectedScreen == AppScreen.MoodTracking,
-                    onClick = { selectedScreen = AppScreen.MoodLog },
+                    selected = selectedScreen == AppScreen.Nutrition,
+                    onClick = { selectedScreen = AppScreen.Nutrition },
+                    label = { Text("Nutrition") },
+                    icon = { Text("🥗") }
+                )
+
+                NavigationBarItem(
+                    selected = selectedScreen == AppScreen.Mood,
+                    onClick = { selectedScreen = AppScreen.Mood },
                     label = { Text("Mood") },
                     icon = { Text("🙂") }
+                )
+
+                NavigationBarItem(
+                    selected = selectedScreen == AppScreen.Sleep,
+                    onClick = { selectedScreen = AppScreen.Sleep },
+                    label = { Text("Sleep") },
+                    icon = { Text("🌙") }
                 )
             }
         }
@@ -141,7 +145,9 @@ fun FitnessApp() {
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
                     onLogSleepClick = { showSleepLogDialog = true },
-                    onLogMoodClick = { selectedScreen = AppScreen.MoodTracking }
+                    onLogMoodClick = {
+                        moodController.openTrackingDialog()
+                    }
                 )
             }
 
@@ -166,7 +172,10 @@ fun FitnessApp() {
             }
 
             AppScreen.Sleep -> {
-                SleepScreen()
+                SleepScreen(
+                    modifier = Modifier.padding(padding),
+                    sleepViewModel = sleepViewModel
+                )
             }
 
             AppScreen.Steps -> {
@@ -175,24 +184,10 @@ fun FitnessApp() {
                 )
             }
 
-            AppScreen.MoodLog -> {
-                MoodFeature.LogRoute(
+            AppScreen.Mood -> {
+                MoodFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    onLogNewMood = {
-                        selectedScreen = AppScreen.MoodTracking
-                    }
-                )
-            }
-
-            AppScreen.MoodTracking -> {
-                MoodFeature.TrackingRoute(
-                    modifier = Modifier.padding(padding),
-                    onSaved = {
-                        selectedScreen = AppScreen.MoodLog
-                    },
-                    onBack = {
-                        selectedScreen = AppScreen.MoodLog
-                    }
+                    controller = moodController
                 )
             }
         }
@@ -208,6 +203,10 @@ fun FitnessApp() {
             )
         }
 
+        MoodFeature.DialogHost(
+            controller = moodController
+        )
+
         if (showSleepLogDialog) {
             SleepLogDialog(
                 goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
@@ -218,9 +217,9 @@ fun FitnessApp() {
 
                     val now = System.currentTimeMillis()
 
-                    SleepRepository.addSleep(
+                    sleepViewModel.addSleep(
                         SleepEntry(
-                            id = now.toInt(),
+                            id = now,
                             date = SleepDateUtils.formatHistoryDate(now),
                             sleepHour = sleepHour,
                             sleepMinute = sleepMinute,

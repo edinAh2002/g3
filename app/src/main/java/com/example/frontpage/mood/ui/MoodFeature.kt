@@ -1,9 +1,17 @@
 package com.example.frontpage.mood.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 
 object MoodFeature {
+
+    @Composable
+    fun rememberController(): MoodFeatureController {
+        return remember {
+            MoodFeatureController()
+        }
+    }
 
     @Composable
     fun HomeSummaryCard(
@@ -15,26 +23,31 @@ object MoodFeature {
     }
 
     @Composable
-    fun LogRoute(
+    fun MainRoute(
         modifier: Modifier = Modifier,
-        onLogNewMood: () -> Unit
+        controller: MoodFeatureController
     ) {
-        MoodLogRoute(
+        MoodMainRoute(
             modifier = modifier,
-            onLogNewMood = onLogNewMood
+            onLogNewMood = {
+                controller.openTrackingDialog()
+            }
         )
     }
 
     @Composable
-    fun TrackingRoute(
-        modifier: Modifier = Modifier,
-        onSaved: () -> Unit,
-        onBack: () -> Unit
+    fun DialogHost(
+        controller: MoodFeatureController
     ) {
-        MoodTrackingRoute(
-            modifier = modifier,
-            onSaved = onSaved,
-            onBack = onBack
-        )
+        if (controller.showTrackingDialog) {
+            MoodTrackingDialogRoute(
+                onSaved = {
+                    controller.closeTrackingDialog()
+                },
+                onDismiss = {
+                    controller.closeTrackingDialog()
+                }
+            )
+        }
     }
 }

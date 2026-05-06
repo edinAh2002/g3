@@ -6,10 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.frontpage.mood.data.MoodDao
 import com.example.frontpage.mood.model.MoodEntry
+import com.example.frontpage.sleep.data.SleepDao
+import com.example.frontpage.sleep.model.SleepEntry
 
 @Database(
     entities = [
-        MoodEntry::class
+        MoodEntry::class,
+        SleepEntry::class
     ],
     version = 2,
     exportSchema = false
@@ -17,6 +20,7 @@ import com.example.frontpage.mood.model.MoodEntry
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun moodDao(): MoodDao
+    abstract fun sleepDao(): SleepDao
 
     companion object {
         @Volatile

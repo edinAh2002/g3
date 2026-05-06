@@ -1,7 +1,12 @@
 package com.example.frontpage.sleep.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "sleep_entries")
 data class SleepEntry(
-    val id: Int,
+    @PrimaryKey
+    val id: Long,
     val date: String,
     val sleepHour: Int,
     val sleepMinute: Int,

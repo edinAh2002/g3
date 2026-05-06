@@ -1,65 +1,32 @@
 package com.example.frontpage.sleep.data
 
 import com.example.frontpage.sleep.model.SleepEntry
+import kotlinx.coroutines.flow.Flow
 
-object SleepRepository {
-
-    private val sleepLogs = mutableListOf<SleepEntry>()
-
-    fun addSleep(entry: SleepEntry) {
-        sleepLogs.add(entry)
+class SleepRepository(
+    private val sleepDao: SleepDao
+) {
+    fun getAllSleepLogs(): Flow<List<SleepEntry>> {
+        return sleepDao.getAllSleepLogs()
     }
 
-    fun updateSleep(updatedEntry: SleepEntry) {
-        val index = sleepLogs.indexOfFirst { it.id == updatedEntry.id }
-
-        if (index != -1) {
-            sleepLogs[index] = updatedEntry
-        }
+    fun getLatestSleep(): Flow<SleepEntry?> {
+        return sleepDao.getLatestSleep()
     }
 
-    fun deleteSleep(id: Int) {
-        sleepLogs.removeAll { it.id == id }
+    suspend fun addSleep(entry: SleepEntry) {
+        sleepDao.addSleep(entry)
     }
 
-    fun getAllSleepLogs(): List<SleepEntry> {
-        return sleepLogs
+    suspend fun updateSleep(entry: SleepEntry) {
+        sleepDao.updateSleep(entry)
     }
 
-    fun getLatestSleep(): SleepEntry? {
-        return sleepLogs.lastOrNull()
+    suspend fun deleteSleep(id: Long) {
+        sleepDao.deleteSleep(id)
     }
 
-    fun getAverageSleepMinutes(): Int {
-        if (sleepLogs.isEmpty()) return 0
-
-        return sleepLogs
-            .map { it.durationMinutes }
-            .average()
-            .toInt()
-    }
-
-    fun getAverageSleep(): Double {
-        if (sleepLogs.isEmpty()) return 0.0
-
-        return sleepLogs
-            .map { it.durationMinutes }
-            .average() / 60.0
-    }
-
-    fun getLongestSleepMinutes(): Int {
-        return sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
-    }
-
-    fun getShortestSleepMinutes(): Int {
-        return sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
-    }
-
-    fun getTotalLogs(): Int {
-        return sleepLogs.size
-    }
-
-    fun clearAllLogs() {
-        sleepLogs.clear()
+    suspend fun clearAllLogs() {
+        sleepDao.clearAllLogs()
     }
 }
