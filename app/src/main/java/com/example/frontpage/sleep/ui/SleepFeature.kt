@@ -1,11 +1,12 @@
 package com.example.frontpage.sleep.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.sleep.SleepViewModel
-import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.ui.cards.SleepHomeSummaryCard
@@ -50,24 +51,24 @@ object SleepFeature {
         controller: SleepFeatureController,
         viewModel: SleepViewModel = viewModel()
     ) {
+        val goalMinutes by viewModel.goalMinutes.collectAsState()
+
         if (controller.showLogDialog) {
             SleepLogDialog(
                 existingEntry = controller.editingEntry,
-                goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
+                goalMinutes = goalMinutes,
                 onDismiss = {
                     controller.closeLogDialog()
                 },
-                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
+                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, wakeDateMillis, quality, durationMinutes, notes ->
 
                     val editingEntry = controller.editingEntry
 
                     if (editingEntry == null) {
-                        val now = System.currentTimeMillis()
-
                         viewModel.addSleep(
                             SleepEntry(
-                                id = now,
-                                date = SleepDateUtils.formatHistoryDate(now),
+                                id = System.currentTimeMillis(),
+                                date = SleepDateUtils.formatHistoryDate(wakeDateMillis),
                                 sleepHour = sleepHour,
                                 sleepMinute = sleepMinute,
                                 wakeHour = wakeHour,
@@ -75,19 +76,21 @@ object SleepFeature {
                                 durationMinutes = durationMinutes,
                                 quality = quality,
                                 notes = notes,
-                                dateMillis = now
+                                dateMillis = wakeDateMillis
                             )
                         )
                     } else {
                         viewModel.updateSleep(
                             editingEntry.copy(
+                                date = SleepDateUtils.formatHistoryDate(wakeDateMillis),
                                 sleepHour = sleepHour,
                                 sleepMinute = sleepMinute,
                                 wakeHour = wakeHour,
                                 wakeMinute = wakeMinute,
                                 durationMinutes = durationMinutes,
                                 quality = quality,
-                                notes = notes
+                                notes = notes,
+                                dateMillis = wakeDateMillis
                             )
                         )
                     }

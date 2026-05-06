@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.sleep.data.SleepRepository
+import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.model.SleepEntry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,10 +28,14 @@ class SleepViewModel(
     private val authRepository: AuthRepository
 
     private val authPreferences: SharedPreferences
+    private val appContext = application.applicationContext
 
     private val currentUserId = MutableStateFlow<Long?>(null)
 
     val sleepLogs: StateFlow<List<SleepEntry>>
+
+    private val _goalMinutes = MutableStateFlow(SleepSettingsRepository.DEFAULT_SLEEP_GOAL_MINUTES)
+    val goalMinutes: StateFlow<Int> = _goalMinutes
 
     private val authPreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
@@ -55,6 +60,7 @@ class SleepViewModel(
         authPreferences.registerOnSharedPreferenceChangeListener(authPreferenceListener)
 
         currentUserId.value = authRepository.getCurrentUserId()
+        refreshSleepGoal()
 
         sleepLogs = currentUserId
             .flatMapLatest { userId ->
@@ -73,12 +79,24 @@ class SleepViewModel(
 
     fun refreshCurrentUser() {
         currentUserId.value = authRepository.getCurrentUserId()
+        refreshSleepGoal()
     }
 
     private fun getCurrentUserIdOrRefresh(): Long? {
         val userId = authRepository.getCurrentUserId()
         currentUserId.value = userId
+        refreshSleepGoal()
         return userId
+    }
+
+    fun updateSleepGoalMinutes(newGoalMinutes: Int) {
+        val updatedGoalMinutes = SleepSettingsRepository.updateSleepGoalMinutes(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            newGoalMinutes = newGoalMinutes
+        )
+
+        _goalMinutes.value = updatedGoalMinutes
     }
 
     fun addSleep(entry: SleepEntry) {
@@ -120,6 +138,13 @@ class SleepViewModel(
 
             repository.clearAllLogs(userId)
         }
+    }
+
+    private fun refreshSleepGoal() {
+        _goalMinutes.value = SleepSettingsRepository.getSleepGoalMinutes(
+            context = appContext,
+            userId = currentUserId.value
+        )
     }
 
     override fun onCleared() {

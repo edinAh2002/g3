@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -15,6 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,10 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepQuality
-import com.example.frontpage.sleep.domain.SleepCalculator
 
 private enum class TimePickerTarget {
     SleepTime,
@@ -37,13 +40,14 @@ private enum class TimePickerTarget {
 @Composable
 fun SleepLogDialog(
     existingEntry: SleepEntry? = null,
-    goalMinutes: Int = SleepSettingsRepository.sleepGoalMinutes,
+    goalMinutes: Int,
     onDismiss: () -> Unit,
     onSave: (
         sleepHour: Int,
         sleepMinute: Int,
         wakeHour: Int,
         wakeMinute: Int,
+        wakeDateMillis: Long,
         quality: SleepQuality,
         durationMinutes: Int,
         notes: String
@@ -65,6 +69,10 @@ fun SleepLogDialog(
         mutableStateOf(existingEntry?.wakeMinute ?: 0)
     }
 
+    var wakeDateMillis by remember(existingEntry?.id) {
+        mutableStateOf(existingEntry?.dateMillis ?: System.currentTimeMillis())
+    }
+
     var selectedQuality by remember(existingEntry?.id) {
         mutableStateOf(existingEntry?.quality ?: SleepQuality.Good)
     }
@@ -74,6 +82,7 @@ fun SleepLogDialog(
     }
 
     var activeTimePicker by remember { mutableStateOf<TimePickerTarget?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     val durationMinutes = SleepCalculator.calculateDurationMinutes(
         sleepHour = sleepHour,
@@ -97,6 +106,9 @@ fun SleepLogDialog(
         durationMinutes = durationMinutes,
         goalMinutes = goalMinutes
     )
+
+    val durationValidationMessage = SleepCalculator.getDurationValidationMessage(durationMinutes)
+    val isDurationValid = SleepCalculator.isRealisticDuration(durationMinutes)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -126,6 +138,13 @@ fun SleepLogDialog(
                     }
                 }
 
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Wake Date: ${SleepDateUtils.formatHistoryDate(wakeDateMillis)}")
+                }
+
                 Text(
                     text = "Sleep Quality",
                     style = MaterialTheme.typography.titleSmall
@@ -139,14 +158,14 @@ fun SleepLogDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         QualityButton(
-                            text = "😴 Poor",
+                            text = "Poor",
                             selected = selectedQuality == SleepQuality.Poor,
                             onClick = { selectedQuality = SleepQuality.Poor },
                             modifier = Modifier.weight(1f)
                         )
 
                         QualityButton(
-                            text = "🙂 Okay",
+                            text = "Okay",
                             selected = selectedQuality == SleepQuality.Okay,
                             onClick = { selectedQuality = SleepQuality.Okay },
                             modifier = Modifier.weight(1f)
@@ -158,14 +177,14 @@ fun SleepLogDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         QualityButton(
-                            text = "😊 Good",
+                            text = "Good",
                             selected = selectedQuality == SleepQuality.Good,
                             onClick = { selectedQuality = SleepQuality.Good },
                             modifier = Modifier.weight(1f)
                         )
 
                         QualityButton(
-                            text = "🌟 Great",
+                            text = "Great",
                             selected = selectedQuality == SleepQuality.Great,
                             onClick = { selectedQuality = SleepQuality.Great },
                             modifier = Modifier.weight(1f)
@@ -213,19 +232,28 @@ fun SleepLogDialog(
                             text = suggestionText,
                             style = MaterialTheme.typography.bodySmall
                         )
+
+                        if (durationValidationMessage != null) {
+                            Text(
+                                text = durationValidationMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = durationMinutes > 0,
+                enabled = isDurationValid,
                 onClick = {
                     onSave(
                         sleepHour,
                         sleepMinute,
                         wakeHour,
                         wakeMinute,
+                        wakeDateMillis,
                         selectedQuality,
                         durationMinutes,
                         notes.trim()
@@ -241,6 +269,19 @@ fun SleepLogDialog(
             }
         }
     )
+
+    if (showDatePicker) {
+        WakeDatePickerDialog(
+            initialDateMillis = wakeDateMillis,
+            onDismiss = {
+                showDatePicker = false
+            },
+            onConfirm = { selectedDateMillis ->
+                wakeDateMillis = selectedDateMillis
+                showDatePicker = false
+            }
+        )
+    }
 
     activeTimePicker?.let { pickerTarget ->
         ClockPickerDialog(
@@ -290,6 +331,40 @@ private fun QualityButton(
         ) {
             Text(text)
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WakeDatePickerDialog(
+    initialDateMillis: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDateMillis
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        datePickerState.selectedDateMillis ?: initialDateMillis
+                    )
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
     }
 }
 

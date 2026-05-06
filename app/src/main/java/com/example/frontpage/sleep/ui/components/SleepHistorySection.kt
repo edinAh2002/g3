@@ -42,7 +42,7 @@ fun SleepHistoryCard(
             )
 
             Text(
-                text = "${SleepCalculator.formatTime(entry.sleepHour, entry.sleepMinute)} → ${SleepCalculator.formatTime(entry.wakeHour, entry.wakeMinute)}"
+                text = "${SleepCalculator.formatTime(entry.sleepHour, entry.sleepMinute)} to ${SleepCalculator.formatTime(entry.wakeHour, entry.wakeMinute)}"
             )
 
             Text("Quality: ${entry.quality}")

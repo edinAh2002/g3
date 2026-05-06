@@ -1,13 +1,18 @@
 package com.example.frontpage.sleep.domain
+
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepQuality
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlin.math.abs
 
 object SleepCalculator {
+
+    const val MIN_REALISTIC_SLEEP_MINUTES = 30
+    const val MAX_REALISTIC_SLEEP_MINUTES = 16 * 60
 
     fun calculateDurationMinutes(
         sleepHour: Int,
@@ -18,7 +23,7 @@ object SleepCalculator {
         val sleepTotalMinutes = sleepHour * 60 + sleepMinute
         var wakeTotalMinutes = wakeHour * 60 + wakeMinute
 
-        // Handles sleeping before midnight and waking up after midnight
+        // Handles sleeping before midnight and waking up after midnight.
         if (wakeTotalMinutes < sleepTotalMinutes) {
             wakeTotalMinutes += 24 * 60
         }
@@ -40,6 +45,22 @@ object SleepCalculator {
         )
 
         return durationMinutes / 60.0
+    }
+
+    fun isRealisticDuration(durationMinutes: Int): Boolean {
+        return durationMinutes in MIN_REALISTIC_SLEEP_MINUTES..MAX_REALISTIC_SLEEP_MINUTES
+    }
+
+    fun getDurationValidationMessage(durationMinutes: Int): String? {
+        return when {
+            durationMinutes < MIN_REALISTIC_SLEEP_MINUTES ->
+                "Sleep must be at least ${formatDuration(MIN_REALISTIC_SLEEP_MINUTES)}."
+
+            durationMinutes > MAX_REALISTIC_SLEEP_MINUTES ->
+                "Sleep cannot be more than ${formatDuration(MAX_REALISTIC_SLEEP_MINUTES)}."
+
+            else -> null
+        }
     }
 
     fun formatDuration(durationMinutes: Int): String {
@@ -115,7 +136,7 @@ object SleepCalculator {
 
         return when {
             difference > 90 -> "Try going to bed around 30 minutes earlier tonight."
-            difference > 30 -> "Try going to bed 15–20 minutes earlier tonight."
+            difference > 30 -> "Try going to bed 15-20 minutes earlier tonight."
             difference > 0 -> "You were very close. A slightly earlier bedtime could help."
             durationMinutes <= goalMinutes + 90 -> "Great job. Try to keep this sleep routine consistent."
             else -> "You slept much longer than your goal. Check if your schedule feels balanced."
@@ -298,6 +319,15 @@ object SleepCalculator {
             variationMinutes <= 45 && durationRangeMinutes <= 60 -> 0.75f
             variationMinutes <= 75 && durationRangeMinutes <= 120 -> 0.45f
             else -> 0.2f
+        }
+    }
+
+    fun qualityScore(quality: SleepQuality): Int {
+        return when (quality) {
+            SleepQuality.Poor -> 35
+            SleepQuality.Okay -> 60
+            SleepQuality.Good -> 80
+            SleepQuality.Great -> 100
         }
     }
 }

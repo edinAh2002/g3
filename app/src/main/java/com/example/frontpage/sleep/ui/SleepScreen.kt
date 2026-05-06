@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,10 +22,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
-import com.example.frontpage.sleep.data.SleepSettingsRepository
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.domain.buildPrimarySleepRecommendation
+import com.example.frontpage.sleep.domain.buildSleepGoalBalance
+import com.example.frontpage.sleep.domain.buildSleepMoodInsight
+import com.example.frontpage.sleep.domain.buildSleepScoreSummary
+import com.example.frontpage.sleep.domain.buildSleepStreakSummary
 import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepHistoryFilter
@@ -48,17 +54,20 @@ fun SleepScreen(
     modifier: Modifier = Modifier,
     onLogSleepClick: () -> Unit,
     onEditSleepEntry: (SleepEntry) -> Unit,
-    viewModel: SleepViewModel = viewModel()
+    viewModel: SleepViewModel = viewModel(),
+    moodViewModel: MoodViewModel = viewModel()
 ) {
     var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
     var showGoalDialog by remember { mutableStateOf(false) }
     var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
-    var goalMinutes by remember {
-        mutableStateOf(SleepSettingsRepository.sleepGoalMinutes)
-    }
-
     val sleepLogs by viewModel.sleepLogs.collectAsState()
+    val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val moodEntries by moodViewModel.allMoodEntries.collectAsState()
+
+    LaunchedEffect(moodViewModel) {
+        moodViewModel.refreshCurrentUser()
+    }
 
     val latestSleep = sleepLogs.lastOrNull()
 
@@ -87,6 +96,37 @@ fun SleepScreen(
 
     val sleepDurationRangeMinutes =
         SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
+
+    val sleepScoreSummary = buildSleepScoreSummary(
+        latestSleep = latestSleep,
+        goalMinutes = goalMinutes,
+        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
+        durationRangeMinutes = sleepDurationRangeMinutes
+    )
+
+    val sleepGoalBalance = buildSleepGoalBalance(
+        sleepLogs = last7DaysSleepLogs,
+        goalMinutes = goalMinutes
+    )
+
+    val streakSummary = buildSleepStreakSummary(
+        sleepLogs = sleepLogs,
+        goalMinutes = goalMinutes
+    )
+
+    val primaryRecommendation = buildPrimarySleepRecommendation(
+        latestSleep = latestSleep,
+        goalMinutes = goalMinutes,
+        sleepGoalBalance = sleepGoalBalance,
+        streakSummary = streakSummary,
+        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
+        durationRangeMinutes = sleepDurationRangeMinutes
+    )
+
+    val sleepMoodInsight = buildSleepMoodInsight(
+        sleepLogs = sleepLogs,
+        moodEntries = moodEntries
+    )
 
     val filteredSleepLogs = when (selectedHistoryFilter) {
         SleepHistoryFilter.All -> sleepLogs
@@ -131,6 +171,9 @@ fun SleepScreen(
                     shortestSleepMinutes = shortestSleepMinutes,
                     totalLogs = sleepLogs.size,
                     weeklyChartData = weeklyChartData,
+                    sleepScoreSummary = sleepScoreSummary,
+                    sleepGoalBalance = sleepGoalBalance,
+                    streakSummary = streakSummary,
                     onLogSleepClick = onLogSleepClick,
                     onEditGoalClick = {
                         showGoalDialog = true
@@ -163,15 +206,24 @@ fun SleepScreen(
                     averageWakeTimeMinutes = averageWakeTimeMinutes,
                     sleepConsistencyVariationMinutes = sleepConsistencyVariationMinutes,
                     sleepDurationRangeMinutes = sleepDurationRangeMinutes,
-                    consistencyLogCount = last7DaysSleepLogs.size
+                    consistencyLogCount = last7DaysSleepLogs.size,
+                    sleepScoreSummary = sleepScoreSummary,
+                    sleepGoalBalance = sleepGoalBalance,
+                    streakSummary = streakSummary,
+                    primaryRecommendation = primaryRecommendation,
+                    sleepMoodInsight = sleepMoodInsight
                 )
             }
 
             SleepPage.Settings -> {
                 SleepSettingsPage(
                     goalMinutes = goalMinutes,
+                    totalLogs = sleepLogs.size,
                     onEditGoalClick = {
                         showGoalDialog = true
+                    },
+                    onClearSleepHistoryClick = {
+                        viewModel.clearAllLogs()
                     }
                 )
             }
@@ -185,8 +237,7 @@ fun SleepScreen(
                 showGoalDialog = false
             },
             onSave = { newGoalMinutes ->
-                SleepSettingsRepository.updateSleepGoalMinutes(newGoalMinutes)
-                goalMinutes = SleepSettingsRepository.sleepGoalMinutes
+                viewModel.updateSleepGoalMinutes(newGoalMinutes)
                 showGoalDialog = false
             }
         )
