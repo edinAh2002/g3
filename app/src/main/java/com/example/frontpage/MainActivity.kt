@@ -191,7 +191,6 @@ fun FitnessApp(
                     },
                     onGuestClick = {
                         authViewModel.continueAsGuest {
-                            sleepViewModel.refreshCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },
@@ -207,7 +206,6 @@ fun FitnessApp(
                     onUsernameChange = authViewModel::onUsernameChange,
                     onLoginClick = {
                         authViewModel.logIn {
-                            sleepViewModel.refreshCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },
@@ -227,7 +225,6 @@ fun FitnessApp(
                     onUsernameChange = authViewModel::onUsernameChange,
                     onSignUpClick = {
                         authViewModel.signUp {
-                            sleepViewModel.refreshCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },

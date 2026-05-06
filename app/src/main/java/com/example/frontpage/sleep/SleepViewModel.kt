@@ -1,6 +1,8 @@
 package com.example.frontpage.sleep
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
@@ -24,9 +26,16 @@ class SleepViewModel(
     private val repository: SleepRepository
     private val authRepository: AuthRepository
 
+    private val authPreferences: SharedPreferences
+
     private val currentUserId = MutableStateFlow<Long?>(null)
 
     val sleepLogs: StateFlow<List<SleepEntry>>
+
+    private val authPreferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            refreshCurrentUser()
+        }
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -37,6 +46,13 @@ class SleepViewModel(
             userDao = database.userDao(),
             context = application.applicationContext
         )
+
+        authPreferences = application.applicationContext.getSharedPreferences(
+            AUTH_PREFS_NAME,
+            Context.MODE_PRIVATE
+        )
+
+        authPreferences.registerOnSharedPreferenceChangeListener(authPreferenceListener)
 
         currentUserId.value = authRepository.getCurrentUserId()
 
@@ -104,5 +120,14 @@ class SleepViewModel(
 
             repository.clearAllLogs(userId)
         }
+    }
+
+    override fun onCleared() {
+        authPreferences.unregisterOnSharedPreferenceChangeListener(authPreferenceListener)
+        super.onCleared()
+    }
+
+    companion object {
+        private const val AUTH_PREFS_NAME = "auth_preferences"
     }
 }
