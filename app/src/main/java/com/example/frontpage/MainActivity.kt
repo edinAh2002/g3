@@ -552,8 +552,8 @@ fun HomeScreen(
             title = {
                 Text(
                     text = "Account Settings",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontSize = 20.sp
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontSize = 24.sp
 
                 )
             },
@@ -566,7 +566,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Name", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(currentUsername ?: "Unknown")
+                        Text(currentUsername ?: "Unknown", fontSize = 14.sp)
                     }
 
                     Row(
@@ -574,7 +574,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Account type", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(if (isGuest) "Guest" else "Normal")
+                        Text(if (isGuest) "Guest" else "Normal", fontSize = 14.sp)
                     }
 
                     Row(
@@ -582,31 +582,31 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("User ID", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text("${currentUserId ?: "Unknown"}")
+                        Text("${currentUserId ?: "Unknown"}", fontSize = 14.sp)
                     }
 
                     Button(
                         onClick = onLogOutClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(64.dp)
+                            .height(48.dp)
                     ) {
-                        Text("Log out", fontSize = 16.sp )
+                        Text("Log out", fontSize = 20.sp )
                     }
 
                     Button(
                         onClick = onSwitchAccountClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(64.dp)
+                            .height(48.dp)
                     ) {
-                        Text("Switch account", fontSize = 16.sp)
+                        Text("Switch account", fontSize = 20.sp)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showSettings = false }) {
-                    Text("Close", fontSize = 18.sp)
+                    Text("Close", fontSize = 20.sp)
                 }
             }
         )
