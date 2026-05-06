@@ -8,11 +8,14 @@ import com.example.frontpage.mood.data.MoodDao
 import com.example.frontpage.mood.model.MoodEntry
 import com.example.frontpage.sleep.data.SleepDao
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.auth.model.User
+import com.example.frontpage.auth.data.UserDao
 
 @Database(
     entities = [
         MoodEntry::class,
-        SleepEntry::class
+        SleepEntry::class,
+        User::class
     ],
     version = 2,
     exportSchema = false
@@ -21,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun moodDao(): MoodDao
     abstract fun sleepDao(): SleepDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
