@@ -17,6 +17,7 @@ import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepHistoryFilter
 import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.model.SleepTag
 
 @Composable
 fun SleepHistoryCard(
@@ -46,6 +47,18 @@ fun SleepHistoryCard(
             )
 
             Text("Quality: ${entry.quality}")
+
+            Text("Source: ${entry.source.label}")
+            Text("Snoring: ${entry.snoringLevel.label}")
+
+            val tags = SleepTag.fromStorage(entry.tags)
+            if (tags.isNotEmpty()) {
+                Text("Tags: ${tags.joinToString { it.label }}")
+            }
+
+            if (entry.dreamJournal.isNotBlank()) {
+                Text("Dreams: ${entry.dreamJournal}")
+            }
 
             if (entry.notes.isNotBlank()) {
                 Text("Notes: ${entry.notes}")

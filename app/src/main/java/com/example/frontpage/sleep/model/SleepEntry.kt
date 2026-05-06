@@ -19,5 +19,17 @@ data class SleepEntry(
     val durationMinutes: Int,
     val quality: SleepQuality,
     val notes: String = "",
-    val dateMillis: Long = System.currentTimeMillis()
+    val dateMillis: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(defaultValue = "")
+    val dreamJournal: String = "",
+
+    @ColumnInfo(defaultValue = "None")
+    val snoringLevel: SnoringLevel = SnoringLevel.None,
+
+    @ColumnInfo(defaultValue = "")
+    val tags: String = "",
+
+    @ColumnInfo(defaultValue = "Manual")
+    val source: SleepSource = SleepSource.Manual
 )

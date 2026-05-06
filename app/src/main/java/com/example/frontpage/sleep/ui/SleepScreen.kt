@@ -1,5 +1,6 @@
 package com.example.frontpage.sleep.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,8 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.health.connect.client.PermissionController
 import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
+import com.example.frontpage.sleep.data.SleepHealthConnectManager
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.domain.buildPrimarySleepRecommendation
@@ -31,6 +34,7 @@ import com.example.frontpage.sleep.domain.buildSleepGoalBalance
 import com.example.frontpage.sleep.domain.buildSleepMoodInsight
 import com.example.frontpage.sleep.domain.buildSleepScoreSummary
 import com.example.frontpage.sleep.domain.buildSleepStreakSummary
+import com.example.frontpage.sleep.domain.buildSleepTagInsight
 import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepHistoryFilter
@@ -63,10 +67,21 @@ fun SleepScreen(
 
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
+
+    val healthConnectPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { grantedPermissions ->
+        viewModel.onHealthConnectPermissionsChanged(grantedPermissions)
+    }
 
     LaunchedEffect(moodViewModel) {
         moodViewModel.refreshCurrentUser()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.refreshHealthConnectState()
     }
 
     val latestSleep = sleepLogs.lastOrNull()
@@ -127,6 +142,8 @@ fun SleepScreen(
         sleepLogs = sleepLogs,
         moodEntries = moodEntries
     )
+
+    val sleepTagInsight = buildSleepTagInsight(sleepLogs)
 
     val filteredSleepLogs = when (selectedHistoryFilter) {
         SleepHistoryFilter.All -> sleepLogs
@@ -211,7 +228,8 @@ fun SleepScreen(
                     sleepGoalBalance = sleepGoalBalance,
                     streakSummary = streakSummary,
                     primaryRecommendation = primaryRecommendation,
-                    sleepMoodInsight = sleepMoodInsight
+                    sleepMoodInsight = sleepMoodInsight,
+                    sleepTagInsight = sleepTagInsight
                 )
             }
 
@@ -219,11 +237,24 @@ fun SleepScreen(
                 SleepSettingsPage(
                     goalMinutes = goalMinutes,
                     totalLogs = sleepLogs.size,
+                    healthConnectState = healthConnectState,
                     onEditGoalClick = {
                         showGoalDialog = true
                     },
                     onClearSleepHistoryClick = {
                         viewModel.clearAllLogs()
+                    },
+                    onRequestHealthConnectAccessClick = {
+                        viewModel.onHealthConnectPermissionRequestStarted()
+
+                        try {
+                            healthConnectPermissionLauncher.launch(SleepHealthConnectManager.PERMISSIONS)
+                        } catch (_: Exception) {
+                            viewModel.onHealthConnectPermissionRequestFailed()
+                        }
+                    },
+                    onImportHealthConnectSleepClick = {
+                        viewModel.importHealthConnectSleep()
                     }
                 )
             }

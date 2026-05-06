@@ -18,13 +18,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.model.HealthConnectAvailability
+import com.example.frontpage.sleep.model.SleepHealthConnectState
 
 @Composable
 fun SleepSettingsPage(
     goalMinutes: Int,
     totalLogs: Int,
+    healthConnectState: SleepHealthConnectState,
     onEditGoalClick: () -> Unit,
-    onClearSleepHistoryClick: () -> Unit
+    onClearSleepHistoryClick: () -> Unit,
+    onRequestHealthConnectAccessClick: () -> Unit,
+    onImportHealthConnectSleepClick: () -> Unit
 ) {
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
@@ -97,6 +102,77 @@ fun SleepSettingsPage(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Clear Sleep History")
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Wearables & Health Connect",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Text(
+                    text = healthConnectState.availability.label,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    text = when {
+                        healthConnectState.availability == HealthConnectAvailability.Unavailable ->
+                            "Health Connect is not available on this device."
+
+                        healthConnectState.availability == HealthConnectAvailability.ProviderUpdateRequired ->
+                            "Install or update Health Connect, then come back to import wearable sleep."
+
+                        healthConnectState.hasSleepPermission ->
+                            "Sleep read access is granted."
+
+                        else ->
+                            "Grant sleep read access to import wearable sessions."
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                OutlinedButton(
+                    onClick = onRequestHealthConnectAccessClick,
+                    enabled = healthConnectState.canRequestPermission,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (healthConnectState.hasSleepPermission) {
+                            "Review Access"
+                        } else {
+                            "Grant Sleep Access"
+                        }
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onImportHealthConnectSleepClick,
+                    enabled = healthConnectState.canImport,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (healthConnectState.isImporting) {
+                            "Importing..."
+                        } else {
+                            "Import Last 30 Days"
+                        }
+                    )
+                }
+
+                healthConnectState.lastImportMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

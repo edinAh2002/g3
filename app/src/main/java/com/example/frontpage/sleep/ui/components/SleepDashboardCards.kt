@@ -16,6 +16,7 @@ import com.example.frontpage.sleep.domain.SleepMoodInsight
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepScoreSummary
 import com.example.frontpage.sleep.domain.SleepStreakSummary
+import com.example.frontpage.sleep.domain.SleepTagInsight
 
 @Composable
 fun SleepStatCard(
@@ -237,6 +238,34 @@ fun SleepMoodInsightCard(
             )
             Text(
                 text = sleepMoodInsight.description,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+fun SleepTagInsightCard(
+    sleepTagInsight: SleepTagInsight,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "Dreams, Snoring & Tags",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = sleepTagInsight.title,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = sleepTagInsight.description,
                 style = MaterialTheme.typography.bodySmall
             )
         }

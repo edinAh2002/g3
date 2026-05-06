@@ -60,7 +60,7 @@ object SleepFeature {
                 onDismiss = {
                     controller.closeLogDialog()
                 },
-                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, wakeDateMillis, quality, durationMinutes, notes ->
+                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, wakeDateMillis, quality, durationMinutes, notes, dreamJournal, snoringLevel, tags ->
 
                     val editingEntry = controller.editingEntry
 
@@ -76,7 +76,10 @@ object SleepFeature {
                                 durationMinutes = durationMinutes,
                                 quality = quality,
                                 notes = notes,
-                                dateMillis = wakeDateMillis
+                                dateMillis = wakeDateMillis,
+                                dreamJournal = dreamJournal,
+                                snoringLevel = snoringLevel,
+                                tags = tags
                             )
                         )
                     } else {
@@ -90,7 +93,10 @@ object SleepFeature {
                                 durationMinutes = durationMinutes,
                                 quality = quality,
                                 notes = notes,
-                                dateMillis = wakeDateMillis
+                                dateMillis = wakeDateMillis,
+                                dreamJournal = dreamJournal,
+                                snoringLevel = snoringLevel,
+                                tags = tags
                             )
                         )
                     }

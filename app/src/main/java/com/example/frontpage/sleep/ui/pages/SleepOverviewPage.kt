@@ -21,6 +21,7 @@ import com.example.frontpage.sleep.domain.SleepGoalBalance
 import com.example.frontpage.sleep.domain.SleepScoreSummary
 import com.example.frontpage.sleep.domain.SleepStreakSummary
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepTag
 import com.example.frontpage.sleep.model.WeeklySleepChartItem
 import com.example.frontpage.sleep.ui.components.SleepFeedbackCard
 import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
@@ -173,6 +174,16 @@ private fun LatestSleepCard(
                 )
 
                 Text("Quality: ${latestSleep.quality}")
+                Text("Source: ${latestSleep.source.label}")
+
+                if (latestSleep.snoringLevel.name != "None") {
+                    Text("Snoring: ${latestSleep.snoringLevel.label}")
+                }
+
+                val tags = SleepTag.fromStorage(latestSleep.tags)
+                if (tags.isNotEmpty()) {
+                    Text("Tags: ${tags.take(3).joinToString { it.label }}")
+                }
 
                 LinearProgressIndicator(
                     progress = {

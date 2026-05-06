@@ -7,8 +7,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
+import com.example.frontpage.sleep.data.SleepHealthConnectManager
 import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.model.SleepHealthConnectState
 import com.example.frontpage.sleep.model.SleepEntry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +28,7 @@ class SleepViewModel(
 
     private val repository: SleepRepository
     private val authRepository: AuthRepository
+    private val sleepHealthConnectManager: SleepHealthConnectManager
 
     private val authPreferences: SharedPreferences
     private val appContext = application.applicationContext
@@ -37,6 +40,9 @@ class SleepViewModel(
     private val _goalMinutes = MutableStateFlow(SleepSettingsRepository.DEFAULT_SLEEP_GOAL_MINUTES)
     val goalMinutes: StateFlow<Int> = _goalMinutes
 
+    private val _healthConnectState = MutableStateFlow(SleepHealthConnectState())
+    val healthConnectState: StateFlow<SleepHealthConnectState> = _healthConnectState
+
     private val authPreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
             refreshCurrentUser()
@@ -46,6 +52,7 @@ class SleepViewModel(
         val database = AppDatabase.getDatabase(application)
 
         repository = SleepRepository(database.sleepDao())
+        sleepHealthConnectManager = SleepHealthConnectManager(appContext)
 
         authRepository = AuthRepository(
             userDao = database.userDao(),
@@ -61,6 +68,7 @@ class SleepViewModel(
 
         currentUserId.value = authRepository.getCurrentUserId()
         refreshSleepGoal()
+        refreshHealthConnectState()
 
         sleepLogs = currentUserId
             .flatMapLatest { userId ->
@@ -97,6 +105,77 @@ class SleepViewModel(
         )
 
         _goalMinutes.value = updatedGoalMinutes
+    }
+
+    fun refreshHealthConnectState() {
+        viewModelScope.launch {
+            _healthConnectState.value = sleepHealthConnectManager.getState().copy(
+                lastImportMessage = _healthConnectState.value.lastImportMessage
+            )
+        }
+    }
+
+    fun onHealthConnectPermissionRequestStarted() {
+        _healthConnectState.value = _healthConnectState.value.copy(
+            lastImportMessage = "If the Health Connect screen opens, allow Sleep access."
+        )
+    }
+
+    fun onHealthConnectPermissionRequestFailed() {
+        _healthConnectState.value = _healthConnectState.value.copy(
+            lastImportMessage = "Could not open Health Connect access. Open Android Settings > Health Connect > App permissions and allow Sleep."
+        )
+    }
+
+    fun onHealthConnectPermissionsChanged(grantedPermissions: Set<String>) {
+        val hasSleepPermission = grantedPermissions.containsAll(SleepHealthConnectManager.PERMISSIONS)
+
+        _healthConnectState.value = _healthConnectState.value.copy(
+            hasSleepPermission = hasSleepPermission,
+            lastImportMessage = if (hasSleepPermission) {
+                "Sleep access granted. You can import Health Connect sleep now."
+            } else {
+                "Sleep access was not granted. If no prompt opened, use Android Settings > Health Connect > App permissions."
+            }
+        )
+
+        refreshHealthConnectState()
+    }
+
+    fun importHealthConnectSleep() {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh()
+
+            if (userId == null) {
+                _healthConnectState.value = _healthConnectState.value.copy(
+                    lastImportMessage = "Log in before importing sleep."
+                )
+                return@launch
+            }
+
+            _healthConnectState.value = _healthConnectState.value.copy(
+                isImporting = true,
+                lastImportMessage = null
+            )
+
+            val importedEntries = sleepHealthConnectManager.readSleepSessionsFromLast30Days()
+
+            importedEntries.forEach { entry ->
+                repository.addSleep(
+                    userId = userId,
+                    entry = entry
+                )
+            }
+
+            _healthConnectState.value = sleepHealthConnectManager.getState().copy(
+                isImporting = false,
+                lastImportMessage = if (importedEntries.isEmpty()) {
+                    "No Health Connect sleep sessions found from the last 30 days."
+                } else {
+                    "Imported ${importedEntries.size} sleep sessions from Health Connect."
+                }
+            )
+        }
     }
 
     fun addSleep(entry: SleepEntry) {

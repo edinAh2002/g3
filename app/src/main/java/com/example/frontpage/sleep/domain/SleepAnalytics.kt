@@ -2,6 +2,7 @@ package com.example.frontpage.sleep.domain
 
 import com.example.frontpage.mood.model.MoodEntry
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepTag
 import com.example.frontpage.sleep.model.WeeklySleepChartItem
 import java.util.Calendar
 import kotlin.math.abs
@@ -32,6 +33,11 @@ data class SleepStreakSummary(
 data class SleepMoodInsight(
     val matchedDays: Int,
     val correlation: Double,
+    val title: String,
+    val description: String
+)
+
+data class SleepTagInsight(
     val title: String,
     val description: String
 )
@@ -277,6 +283,28 @@ fun buildSleepMoodInsight(
             correlation <= -0.35 -> "Across ${matchedPairs.size} matched days, mood does not improve just by sleeping longer."
             else -> "Across ${matchedPairs.size} matched days, mood looks fairly stable across different sleep lengths."
         }
+    )
+}
+
+fun buildSleepTagInsight(
+    sleepLogs: List<SleepEntry>
+): SleepTagInsight? {
+    val taggedSleepLogs = sleepLogs.filter { it.tags.isNotBlank() }
+    if (taggedSleepLogs.isEmpty()) return null
+
+    val topTag = taggedSleepLogs
+        .flatMap { SleepTag.fromStorage(it.tags) }
+        .groupingBy { it }
+        .eachCount()
+        .maxByOrNull { it.value }
+        ?: return null
+
+    val snoringLogs = sleepLogs.count { it.snoringLevel.name != "None" }
+    val dreamLogs = sleepLogs.count { it.dreamJournal.isNotBlank() }
+
+    return SleepTagInsight(
+        title = "Most common tag: ${topTag.key.label}",
+        description = "This appears in ${topTag.value} logs. You also have $snoringLogs snoring notes and $dreamLogs dream journal entries."
     )
 }
 

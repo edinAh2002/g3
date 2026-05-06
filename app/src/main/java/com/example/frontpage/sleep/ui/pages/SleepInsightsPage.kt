@@ -14,6 +14,7 @@ import com.example.frontpage.sleep.domain.SleepGoalBalance
 import com.example.frontpage.sleep.domain.SleepMoodInsight
 import com.example.frontpage.sleep.domain.SleepScoreSummary
 import com.example.frontpage.sleep.domain.SleepStreakSummary
+import com.example.frontpage.sleep.domain.SleepTagInsight
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.ui.components.SleepConsistencyCard
 import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
@@ -22,6 +23,7 @@ import com.example.frontpage.sleep.ui.components.SleepRecommendationCard
 import com.example.frontpage.sleep.ui.components.SleepScoreCard
 import com.example.frontpage.sleep.ui.components.SleepStatCard
 import com.example.frontpage.sleep.ui.components.SleepStreakCard
+import com.example.frontpage.sleep.ui.components.SleepTagInsightCard
 import com.example.frontpage.sleep.ui.components.SleepTrendsCard
 
 @Composable
@@ -39,7 +41,8 @@ fun SleepInsightsPage(
     sleepGoalBalance: SleepGoalBalance,
     streakSummary: SleepStreakSummary,
     primaryRecommendation: String,
-    sleepMoodInsight: SleepMoodInsight?
+    sleepMoodInsight: SleepMoodInsight?,
+    sleepTagInsight: SleepTagInsight?
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -102,6 +105,12 @@ fun SleepInsightsPage(
         if (sleepMoodInsight != null) {
             SleepMoodInsightCard(
                 sleepMoodInsight = sleepMoodInsight
+            )
+        }
+
+        if (sleepTagInsight != null) {
+            SleepTagInsightCard(
+                sleepTagInsight = sleepTagInsight
             )
         }
 

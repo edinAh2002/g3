@@ -19,7 +19,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         SleepEntry::class,
         User::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
