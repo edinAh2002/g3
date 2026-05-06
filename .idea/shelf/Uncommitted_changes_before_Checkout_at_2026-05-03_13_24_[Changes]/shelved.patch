@@ -1,0 +1,61 @@
+Index: .idea/inspectionProfiles/Project_Default.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><component name=\"InspectionProjectProfileManager\">\r\n  <profile version=\"1.0\">\r\n    <option name=\"myName\" value=\"Project Default\" />\r\n    <inspection_tool class=\"ComposePreviewDimensionRespectsLimit\" enabled=\"true\" level=\"WARNING\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"ComposePreviewMustBeTopLevelFunction\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"ComposePreviewNeedsComposableAnnotation\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"ComposePreviewNotSupportedInUnitTestFiles\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"GlancePreviewDimensionRespectsLimit\" enabled=\"true\" level=\"WARNING\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"GlancePreviewMustBeTopLevelFunction\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"GlancePreviewNeedsComposableAnnotation\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"GlancePreviewNotSupportedInUnitTestFiles\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewAnnotationInFunctionWithParameters\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewApiLevelMustBeValid\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewDeviceShouldUseNewSpec\" enabled=\"true\" level=\"WEAK WARNING\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewFontScaleMustBeGreaterThanZero\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewMultipleParameterProviders\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewParameterProviderOnFirstParameter\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n    <inspection_tool class=\"PreviewPickerAnnotation\" enabled=\"true\" level=\"ERROR\" enabled_by_default=\"true\">\r\n      <option name=\"composableFile\" value=\"true\" />\r\n      <option name=\"previewFile\" value=\"true\" />\r\n    </inspection_tool>\r\n  </profile>\r\n</component>
+===================================================================
+diff --git a/.idea/inspectionProfiles/Project_Default.xml b/.idea/inspectionProfiles/Project_Default.xml
+--- a/.idea/inspectionProfiles/Project_Default.xml	(revision 60bbe64099dbaf51530f3267021c8c81813e1735)
++++ b/.idea/inspectionProfiles/Project_Default.xml	(date 1777806737148)
+@@ -3,19 +3,15 @@
+     <option name="myName" value="Project Default" />
+     <inspection_tool class="ComposePreviewDimensionRespectsLimit" enabled="true" level="WARNING" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="ComposePreviewMustBeTopLevelFunction" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="ComposePreviewNeedsComposableAnnotation" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="ComposePreviewNotSupportedInUnitTestFiles" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="GlancePreviewDimensionRespectsLimit" enabled="true" level="WARNING" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+@@ -31,31 +27,24 @@
+     </inspection_tool>
+     <inspection_tool class="PreviewAnnotationInFunctionWithParameters" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewApiLevelMustBeValid" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewDeviceShouldUseNewSpec" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewFontScaleMustBeGreaterThanZero" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewMultipleParameterProviders" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewParameterProviderOnFirstParameter" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+     <inspection_tool class="PreviewPickerAnnotation" enabled="true" level="ERROR" enabled_by_default="true">
+       <option name="composableFile" value="true" />
+-      <option name="previewFile" value="true" />
+     </inspection_tool>
+   </profile>
+ </component>
+\ No newline at end of file

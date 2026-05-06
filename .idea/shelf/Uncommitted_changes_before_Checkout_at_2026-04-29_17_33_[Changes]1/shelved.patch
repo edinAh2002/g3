@@ -1,0 +1,271 @@
+Index: gradle.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># Project-wide Gradle settings.\r\n# IDE (e.g. Android Studio) users:\r\n# Gradle settings configured through the IDE *will override*\r\n# any settings specified in this file.\r\n# For more details on how to configure your build environment visit\r\n# http://www.gradle.org/docs/current/userguide/build_environment.html\r\n# Specifies the JVM arguments used for the daemon process.\r\n# The setting is particularly useful for tweaking memory settings.\r\norg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\r\n# When configured, Gradle will run in incubating parallel mode.\r\n# This option should only be used with decoupled projects. For more details, visit\r\n# https://developer.android.com/r/tools/gradle-multi-project-decoupled-projects\r\n# org.gradle.parallel=true
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>ISO-8859-1
+===================================================================
+diff --git a/gradle.properties b/gradle.properties
+--- a/gradle.properties	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/gradle.properties	(date 1777476438223)
+@@ -10,4 +10,8 @@
+ # When configured, Gradle will run in incubating parallel mode.
+ # This option should only be used with decoupled projects. For more details, visit
+ # https://developer.android.com/r/tools/gradle-multi-project-decoupled-projects
+-# org.gradle.parallel=true
+\ No newline at end of file
++# org.gradle.parallel=true
++
++android.builtInKotlin=false
++android.newDsl=false
++ksp.useKSP2=true
+\ No newline at end of file
+Index: build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// Top-level build file where you can add configuration options common to all sub-projects/modules.\r\nplugins {\r\n    alias(libs.plugins.android.application) apply false\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/build.gradle.kts b/build.gradle.kts
+--- a/build.gradle.kts	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ b/build.gradle.kts	(date 1777476107531)
+@@ -1,4 +1,5 @@
+-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+ plugins {
+-    alias(libs.plugins.android.application) apply false
++    id("com.android.application") version "9.2.0" apply false
++    id("org.jetbrains.kotlin.kapt") version "2.0.21" apply false
++    alias(libs.plugins.kotlin.android) apply false
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MainActivity.java
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MainActivity.java b/app/src/main/java/com/example/fit_tastic/MainActivity.java
+deleted file mode 100644
+--- a/app/src/main/java/com/example/fit_tastic/MainActivity.java	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ /dev/null	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
+@@ -1,34 +0,0 @@
+-package com.example.fit_tastic;
+-
+-import android.content.Intent;
+-import android.os.Bundle;
+-import android.widget.Button;
+-
+-import androidx.activity.EdgeToEdge;
+-import androidx.appcompat.app.AppCompatActivity;
+-import androidx.core.graphics.Insets;
+-import androidx.core.view.ViewCompat;
+-import androidx.core.view.WindowInsetsCompat;
+-
+-public class MainActivity extends AppCompatActivity {
+-
+-    @Override
+-    protected void onCreate(Bundle savedInstanceState) {
+-        super.onCreate(savedInstanceState);
+-        EdgeToEdge.enable(this);
+-        setContentView(R.layout.activity_main);
+-
+-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+-            return insets;
+-        });
+-
+-        Button openMoodTrackingButton = findViewById(R.id.openMoodTrackingButton);
+-
+-        openMoodTrackingButton.setOnClickListener(v -> {
+-            Intent intent = new Intent(MainActivity.this, MoodTrackingActivity.class);
+-            startActivity(intent);
+-        });
+-    }
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.java
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.java b/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.java
+deleted file mode 100644
+--- a/app/src/main/java/com/example/fit_tastic/MoodTrackingActivity.java	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ /dev/null	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
+@@ -1,73 +0,0 @@
+-package com.example.fit_tastic;
+-
+-import android.app.Activity;
+-import android.os.Bundle;
+-import android.widget.Button;
+-import android.widget.EditText;
+-import android.widget.RadioGroup;
+-import android.widget.Toast;
+-
+-import java.text.SimpleDateFormat;
+-import java.util.Date;
+-import java.util.Locale;
+-
+-public class MoodTrackingActivity extends Activity {
+-
+-    private RadioGroup moodRadioGroup;
+-    private EditText moodNoteEditText;
+-    private Button saveMoodButton;
+-
+-    @Override
+-    protected void onCreate(Bundle savedInstanceState) {
+-        super.onCreate(savedInstanceState);
+-        setContentView(R.layout.activity_mood_tracking);
+-
+-        moodRadioGroup = findViewById(R.id.moodRadioGroup);
+-        moodNoteEditText = findViewById(R.id.moodNoteEditText);
+-        saveMoodButton = findViewById(R.id.saveMoodButton);
+-
+-        saveMoodButton.setOnClickListener(v -> saveMoodEntry());
+-    }
+-
+-    private void saveMoodEntry() {
+-        int selectedId = moodRadioGroup.getCheckedRadioButtonId();
+-
+-        if (selectedId == -1) {
+-            Toast.makeText(this, "Please select a mood", Toast.LENGTH_SHORT).show();
+-            return;
+-        }
+-
+-        int moodValue = getMoodValueFromSelectedId(selectedId);
+-        String note = moodNoteEditText.getText().toString().trim();
+-        String todayDate = getTodayDate();
+-
+-        getSharedPreferences("MoodPrefs", MODE_PRIVATE)
+-                .edit()
+-                .putInt(todayDate + "_mood", moodValue)
+-                .putString(todayDate + "_note", note)
+-                .apply();
+-
+-        Toast.makeText(this, "Mood saved successfully", Toast.LENGTH_SHORT).show();
+-    }
+-
+-    private int getMoodValueFromSelectedId(int selectedId) {
+-        if (selectedId == R.id.moodVeryBad) {
+-            return 1;
+-        } else if (selectedId == R.id.moodBad) {
+-            return 2;
+-        } else if (selectedId == R.id.moodOkay) {
+-            return 3;
+-        } else if (selectedId == R.id.moodGood) {
+-            return 4;
+-        } else if (selectedId == R.id.moodGreat) {
+-            return 5;
+-        } else {
+-            return 0;
+-        }
+-    }
+-
+-    private String getTodayDate() {
+-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+-        return formatter.format(new Date());
+-    }
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/AppDatabase.java
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/AppDatabase.java b/app/src/main/java/com/example/fit_tastic/AppDatabase.java
+deleted file mode 100644
+--- a/app/src/main/java/com/example/fit_tastic/AppDatabase.java	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ /dev/null	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
+@@ -1,31 +0,0 @@
+-package com.example.fit_tastic;
+-
+-import android.content.Context;
+-
+-import androidx.room.Database;
+-import androidx.room.Room;
+-import androidx.room.RoomDatabase;
+-
+-@Database(entities = {MoodEntry.class}, version = 1, exportSchema = false)
+-public abstract class AppDatabase extends RoomDatabase {
+-
+-    private static volatile AppDatabase INSTANCE;
+-
+-    public abstract MoodDao moodDao();
+-
+-    public static AppDatabase getDatabase(final Context context) {
+-        if (INSTANCE == null) {
+-            synchronized (AppDatabase.class) {
+-                if (INSTANCE == null) {
+-                    INSTANCE = Room.databaseBuilder(
+-                            context.getApplicationContext(),
+-                            AppDatabase.class,
+-                            "fittastic_database"
+-                    ).build();
+-                }
+-            }
+-        }
+-
+-        return INSTANCE;
+-    }
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodEntry.java
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodEntry.java b/app/src/main/java/com/example/fit_tastic/MoodEntry.java
+deleted file mode 100644
+--- a/app/src/main/java/com/example/fit_tastic/MoodEntry.java	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ /dev/null	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
+@@ -1,31 +0,0 @@
+-package com.example.fit_tastic;
+-
+-import androidx.room.ColumnInfo;
+-import androidx.room.Entity;
+-import androidx.room.Index;
+-import androidx.room.PrimaryKey;
+-
+-@Entity(
+-        tableName = "mood_entries",
+-        indices = {@Index(value = {"date"}, unique = true)}
+-)
+-public class MoodEntry {
+-
+-    @PrimaryKey(autoGenerate = true)
+-    public int id;
+-
+-    @ColumnInfo(name = "date")
+-    public String date;
+-
+-    @ColumnInfo(name = "mood_value")
+-    public int moodValue;
+-
+-    @ColumnInfo(name = "note")
+-    public String note;
+-
+-    public MoodEntry(String date, int moodValue, String note) {
+-        this.date = date;
+-        this.moodValue = moodValue;
+-        this.note = note;
+-    }
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/example/fit_tastic/MoodDao.java
+===================================================================
+diff --git a/app/src/main/java/com/example/fit_tastic/MoodDao.java b/app/src/main/java/com/example/fit_tastic/MoodDao.java
+deleted file mode 100644
+--- a/app/src/main/java/com/example/fit_tastic/MoodDao.java	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
++++ /dev/null	(revision 8fa7762b10dec6bc27506ef94be60071fa71504a)
+@@ -1,21 +0,0 @@
+-package com.example.fit_tastic;
+-
+-import androidx.room.Dao;
+-import androidx.room.Insert;
+-import androidx.room.OnConflictStrategy;
+-import androidx.room.Query;
+-
+-import java.util.List;
+-
+-@Dao
+-public interface MoodDao {
+-
+-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+-    void insertMood(MoodEntry moodEntry);
+-
+-    @Query("SELECT * FROM mood_entries ORDER BY date DESC")
+-    List<MoodEntry> getAllMoodEntries();
+-
+-    @Query("SELECT * FROM mood_entries WHERE date = :date LIMIT 1")
+-    MoodEntry getMoodByDate(String date);
+-}
+\ No newline at end of file
