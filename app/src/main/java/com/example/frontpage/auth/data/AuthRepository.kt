@@ -121,7 +121,6 @@ class AuthRepository(
         private const val PREFS_NAME = "auth_preferences"
         private const val KEY_CURRENT_USER_ID = "current_user_id"
         private const val NO_USER_ID = -1L
-
         private const val GUEST_USERNAME = "__guest__"
     }
 }

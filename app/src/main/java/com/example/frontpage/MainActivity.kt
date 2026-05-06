@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.auth.AuthViewModel
 import com.example.frontpage.auth.data.AuthRepository
@@ -96,6 +99,10 @@ fun FitnessApp(
     )
 
     val authUiState by authViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        authViewModel.loadCurrentUser()
+    }
 
     var selectedScreen by remember {
         mutableStateOf(
@@ -191,6 +198,7 @@ fun FitnessApp(
                     },
                     onGuestClick = {
                         authViewModel.continueAsGuest {
+                            authViewModel.loadCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },
@@ -206,6 +214,7 @@ fun FitnessApp(
                     onUsernameChange = authViewModel::onUsernameChange,
                     onLoginClick = {
                         authViewModel.logIn {
+                            authViewModel.loadCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },
@@ -225,6 +234,7 @@ fun FitnessApp(
                     onUsernameChange = authViewModel::onUsernameChange,
                     onSignUpClick = {
                         authViewModel.signUp {
+                            authViewModel.loadCurrentUser()
                             selectedScreen = AppScreen.Home
                         }
                     },
@@ -242,6 +252,20 @@ fun FitnessApp(
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
                     sleepDisplay = sleepDisplay,
+
+                    currentUsername = authUiState.currentUsername,
+                    currentUserId = authUiState.currentUserId,
+                    isGuest = authUiState.isGuest,
+
+                    onLogOutClick = {
+                        authViewModel.logOut()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+                    onSwitchAccountClick = {
+                        authViewModel.logOut()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
                     onLogSleepClick = { showSleepLogDialog = true },
@@ -347,6 +371,13 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
     sleepDisplay: String?,
+
+    currentUsername: String?,
+    currentUserId: Long?,
+    isGuest: Boolean,
+    onLogOutClick: () -> Unit,
+    onSwitchAccountClick: () -> Unit,
+
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
     onLogSleepClick: () -> Unit,
@@ -404,15 +435,15 @@ fun HomeScreen(
                 Text("Let's crush your goals today!")
             }
 
-            Button(
-                onClick = { showReminderList = true }
-            ) {
-                Text("🔔")
-            }
-        }
+            Row {
+                IconButton(onClick = { showReminderList = true }) {
+                    Text("🔔")
+                }
 
-        IconButton(onClick = { showSettings = true }) {
-            Text("⚙️")
+                IconButton(onClick = { showSettings = true }) {
+                    Text("⚙️")
+                }
+            }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -518,53 +549,64 @@ fun HomeScreen(
     if (showSettings) {
         AlertDialog(
             onDismissRequest = { showSettings = false },
-            title = { Text("Edit Stats") },
+            title = {
+                Text(
+                    text = "Account Settings",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontSize = 20.sp
+
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    OutlinedTextField(
-                        value = calories,
-                        onValueChange = { calories = it },
-                        label = { Text("Calories") }
-                    )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Name", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(currentUsername ?: "Unknown")
+                    }
 
-                    OutlinedTextField(
-                        value = workout,
-                        onValueChange = { workout = it },
-                        label = { Text("Workout") }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Account type", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(if (isGuest) "Guest" else "Normal")
+                    }
 
-                    OutlinedTextField(
-                        value = sleep,
-                        onValueChange = { sleep = it },
-                        label = { Text("Sleep") }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("User ID", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("${currentUserId ?: "Unknown"}")
+                    }
 
-                    OutlinedTextField(
-                        value = hydration,
-                        onValueChange = { hydration = it },
-                        label = { Text("Hydration") }
-                    )
+                    Button(
+                        onClick = onLogOutClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                    ) {
+                        Text("Log out", fontSize = 16.sp )
+                    }
+
+                    Button(
+                        onClick = onSwitchAccountClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                    ) {
+                        Text("Switch account", fontSize = 16.sp)
+                    }
                 }
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        sharedPreferences.edit()
-                            .putString("calories", calories)
-                            .putString("workout", workout)
-                            .putString("sleep", sleep)
-                            .putString("hydration", hydration)
-                            .apply()
-
-                        showSettings = false
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
                 TextButton(onClick = { showSettings = false }) {
-                    Text("Cancel")
+                    Text("Close", fontSize = 18.sp)
                 }
             }
         )

@@ -12,7 +12,10 @@ import kotlinx.coroutines.launch
 data class AuthUiState(
     val username: String = "",
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val currentUsername: String? = null,
+    val currentUserId: Long? = null,
+    val isGuest: Boolean = false
 )
 
 class AuthViewModel(
@@ -28,6 +31,18 @@ class AuthViewModel(
 
     fun getCurrentUserId(): Long? {
         return authRepository.getCurrentUserId()
+    }
+
+    fun loadCurrentUser() {
+        viewModelScope.launch {
+            val user = authRepository.getCurrentUser()
+
+            _uiState.value = _uiState.value.copy(
+                currentUsername = user?.username,
+                currentUserId = user?.id,
+                isGuest = user?.isGuest ?: false
+            )
+        }
     }
 
     fun onUsernameChange(username: String) {
