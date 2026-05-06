@@ -62,11 +62,6 @@ fun MoodHistoryPage(
             } ?: "No data"
         )
 
-        androidx.compose.material3.Button(
-            onClick = onLogMoodClick
-        ) {
-            Text("Log Mood")
-        }
 
         if (moodEntries.isEmpty()) {
             Text("Your mood history will appear here.")

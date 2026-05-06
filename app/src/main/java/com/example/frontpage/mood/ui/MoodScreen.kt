@@ -41,6 +41,7 @@ fun MoodMainRoute(
     val filterState by viewModel.filterState.collectAsState()
 
     LaunchedEffect(Unit) {
+        viewModel.showSection(MoodSection.Overview)
         viewModel.loadMoods()
     }
 

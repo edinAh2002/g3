@@ -129,7 +129,9 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
             onSuccess()
         }
     }
-
+    fun resetTrackingForm() {
+        _trackingState.value = MoodTrackingUiState()
+    }
     fun updateExistingMood(
         moodEntry: MoodEntry,
         newMoodValue: Int,
