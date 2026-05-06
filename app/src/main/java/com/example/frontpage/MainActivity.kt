@@ -43,18 +43,12 @@ import com.example.frontpage.auth.ui.LoginScreen
 import com.example.frontpage.auth.ui.SignUpScreen
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.ui.MoodFeature
-import com.example.frontpage.sleep.SleepViewModel
-import com.example.frontpage.sleep.data.SleepSettingsRepository
-import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.SleepDateUtils
-import com.example.frontpage.sleep.model.SleepEntry
-import com.example.frontpage.sleep.ui.SleepLogDialog
-import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
 import androidx.compose.runtime.LaunchedEffect
 import com.example.frontpage.auth.AuthEvent
+import com.example.frontpage.sleep.ui.SleepFeature
 
 private enum class AppScreen {
     AuthStart,
@@ -128,17 +122,9 @@ fun FitnessApp(
 
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
-    var showSleepLogDialog by remember { mutableStateOf(false) }
-
     val moodController = MoodFeature.rememberController()
+    val sleepController = SleepFeature.rememberController()
 
-    val sleepViewModel: SleepViewModel = viewModel()
-    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
-
-    val latestSleep = sleepLogs.lastOrNull()
-    val sleepDisplay = latestSleep?.let {
-        SleepCalculator.formatDuration(it.durationMinutes)
-    }
 
     Scaffold(
         bottomBar = {
@@ -253,10 +239,11 @@ fun FitnessApp(
                     context = context,
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
-                    sleepDisplay = sleepDisplay,
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
-                    onLogSleepClick = { showSleepLogDialog = true },
+                    onLogSleepClick = {
+                        sleepController.openLogDialog()
+                    },
                     onLogMoodClick = {
                         moodController.openTrackingDialog()
                     }
@@ -284,9 +271,9 @@ fun FitnessApp(
             }
 
             AppScreen.Sleep -> {
-                SleepScreen(
+                SleepFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    sleepViewModel = sleepViewModel
+                    controller = sleepController
                 )
             }
 
@@ -320,35 +307,9 @@ fun FitnessApp(
                 controller = moodController
             )
 
-            if (showSleepLogDialog) {
-                SleepLogDialog(
-                    goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
-                    onDismiss = {
-                        showSleepLogDialog = false
-                    },
-                    onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
-
-                        val now = System.currentTimeMillis()
-
-                        sleepViewModel.addSleep(
-                            SleepEntry(
-                                id = now,
-                                date = SleepDateUtils.formatHistoryDate(now),
-                                sleepHour = sleepHour,
-                                sleepMinute = sleepMinute,
-                                wakeHour = wakeHour,
-                                wakeMinute = wakeMinute,
-                                durationMinutes = durationMinutes,
-                                quality = quality,
-                                notes = notes,
-                                dateMillis = now
-                            )
-                        )
-
-                        showSleepLogDialog = false
-                    }
-                )
-            }
+            SleepFeature.DialogHost(
+                controller = sleepController
+            )
         }
     }
 }
@@ -358,7 +319,6 @@ fun HomeScreen(
     context: Context,
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
-    sleepDisplay: String?,
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
     onLogSleepClick: () -> Unit,
@@ -374,10 +334,6 @@ fun HomeScreen(
         mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
     }
 
-    var sleep by remember {
-        mutableStateOf(sharedPreferences.getString("sleep", "7.5h") ?: "7.5h")
-    }
-
     var hydration by remember {
         mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
     }
@@ -391,8 +347,6 @@ fun HomeScreen(
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
     val calorieDisplay = "$totalCalories / $calorieGoal"
-
-    val sleepCardDisplay = sleepDisplay ?: sleep
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
         Color(0xFFFFCDD2)
@@ -443,9 +397,7 @@ fun HomeScreen(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(
-                title = "Sleep",
-                value = sleepCardDisplay,
+            SleepFeature.HomeSummaryCard(
                 modifier = Modifier.weight(1f)
             )
 
@@ -546,12 +498,6 @@ fun HomeScreen(
                     )
 
                     OutlinedTextField(
-                        value = sleep,
-                        onValueChange = { sleep = it },
-                        label = { Text("Sleep") }
-                    )
-
-                    OutlinedTextField(
                         value = hydration,
                         onValueChange = { hydration = it },
                         label = { Text("Hydration") }
@@ -564,7 +510,6 @@ fun HomeScreen(
                         sharedPreferences.edit()
                             .putString("calories", calories)
                             .putString("workout", workout)
-                            .putString("sleep", sleep)
                             .putString("hydration", hydration)
                             .apply()
 
