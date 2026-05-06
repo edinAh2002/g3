@@ -53,6 +53,8 @@ import com.example.frontpage.sleep.ui.SleepScreen
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+import androidx.compose.runtime.LaunchedEffect
+import com.example.frontpage.auth.AuthEvent
 
 private enum class AppScreen {
     AuthStart,
@@ -105,6 +107,16 @@ fun FitnessApp(
                 AppScreen.AuthStart
             }
         )
+    }
+
+    LaunchedEffect(authViewModel) {
+        authViewModel.authEvents.collect { event ->
+            when (event) {
+                AuthEvent.Authenticated -> {
+                    selectedScreen = AppScreen.Home
+                }
+            }
+        }
     }
 
     val isAuthScreen =
@@ -182,17 +194,15 @@ fun FitnessApp(
             AppScreen.AuthStart -> {
                 AuthStartScreen(
                     onLoginClick = {
-                        authViewModel.clearError()
+                        authViewModel.resetForm()
                         selectedScreen = AppScreen.Login
                     },
                     onSignUpClick = {
-                        authViewModel.clearError()
+                        authViewModel.resetForm()
                         selectedScreen = AppScreen.SignUp
                     },
                     onGuestClick = {
-                        authViewModel.continueAsGuest {
-                            selectedScreen = AppScreen.Home
-                        }
+                        authViewModel.continueAsGuest()
                     },
                     modifier = Modifier.padding(padding)
                 )
@@ -201,16 +211,16 @@ fun FitnessApp(
             AppScreen.Login -> {
                 LoginScreen(
                     username = authUiState.username,
+                    password = authUiState.password,
                     isLoading = authUiState.isLoading,
                     errorMessage = authUiState.errorMessage,
                     onUsernameChange = authViewModel::onUsernameChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
                     onLoginClick = {
-                        authViewModel.logIn {
-                            selectedScreen = AppScreen.Home
-                        }
+                        authViewModel.logIn()
                     },
                     onBackClick = {
-                        authViewModel.clearError()
+                        authViewModel.resetForm()
                         selectedScreen = AppScreen.AuthStart
                     },
                     modifier = Modifier.padding(padding)
@@ -220,16 +230,18 @@ fun FitnessApp(
             AppScreen.SignUp -> {
                 SignUpScreen(
                     username = authUiState.username,
+                    password = authUiState.password,
+                    confirmPassword = authUiState.confirmPassword,
                     isLoading = authUiState.isLoading,
                     errorMessage = authUiState.errorMessage,
                     onUsernameChange = authViewModel::onUsernameChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
+                    onConfirmPasswordChange = authViewModel::onConfirmPasswordChange,
                     onSignUpClick = {
-                        authViewModel.signUp {
-                            selectedScreen = AppScreen.Home
-                        }
+                        authViewModel.signUp()
                     },
                     onBackClick = {
-                        authViewModel.clearError()
+                        authViewModel.resetForm()
                         selectedScreen = AppScreen.AuthStart
                     },
                     modifier = Modifier.padding(padding)

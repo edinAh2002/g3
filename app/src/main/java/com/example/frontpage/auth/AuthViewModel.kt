@@ -4,16 +4,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val username: String = "",
+    val password: String = "",
+    val confirmPassword: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
+
+sealed interface AuthEvent {
+    object Authenticated : AuthEvent
+}
 
 class AuthViewModel(
     private val authRepository: AuthRepository
@@ -21,6 +30,9 @@ class AuthViewModel(
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    private val _authEvents = MutableSharedFlow<AuthEvent>()
+    val authEvents: SharedFlow<AuthEvent> = _authEvents.asSharedFlow()
 
     fun hasSavedUser(): Boolean {
         return authRepository.getCurrentUserId() != null
@@ -37,23 +49,46 @@ class AuthViewModel(
         )
     }
 
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
+    fun onPasswordChange(password: String) {
+        _uiState.value = _uiState.value.copy(
+            password = password,
+            errorMessage = null
+        )
     }
 
-    fun logIn(onSuccess: () -> Unit) {
+    fun onConfirmPasswordChange(confirmPassword: String) {
+        _uiState.value = _uiState.value.copy(
+            confirmPassword = confirmPassword,
+            errorMessage = null
+        )
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = null
+        )
+    }
+
+    fun resetForm() {
+        _uiState.value = AuthUiState()
+    }
+
+    fun logIn() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null
             )
 
-            val result = authRepository.logIn(_uiState.value.username)
+            val result = authRepository.logIn(
+                username = _uiState.value.username,
+                password = _uiState.value.password
+            )
 
             result.fold(
                 onSuccess = {
                     _uiState.value = AuthUiState()
-                    onSuccess()
+                    _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -65,19 +100,23 @@ class AuthViewModel(
         }
     }
 
-    fun signUp(onSuccess: () -> Unit) {
+    fun signUp() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 errorMessage = null
             )
 
-            val result = authRepository.signUp(_uiState.value.username)
+            val result = authRepository.signUp(
+                username = _uiState.value.username,
+                password = _uiState.value.password,
+                confirmPassword = _uiState.value.confirmPassword
+            )
 
             result.fold(
                 onSuccess = {
                     _uiState.value = AuthUiState()
-                    onSuccess()
+                    _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -89,7 +128,7 @@ class AuthViewModel(
         }
     }
 
-    fun continueAsGuest(onSuccess: () -> Unit) {
+    fun continueAsGuest() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
@@ -101,7 +140,7 @@ class AuthViewModel(
             result.fold(
                 onSuccess = {
                     _uiState.value = AuthUiState()
-                    onSuccess()
+                    _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
