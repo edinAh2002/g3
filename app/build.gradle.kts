@@ -45,6 +45,14 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            outputImpl.outputFileName = "FIT-TASTIC-${buildType.name}-v1${versionName}.apk"
+        }
+    }
+
 }
 
 dependencies {
