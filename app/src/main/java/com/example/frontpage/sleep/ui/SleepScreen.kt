@@ -81,6 +81,7 @@ fun SleepScreen(
     }
 
     LaunchedEffect(viewModel) {
+        viewModel.refreshCurrentUser()
         viewModel.refreshHealthConnectState()
     }
 

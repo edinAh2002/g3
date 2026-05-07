@@ -1,6 +1,7 @@
 package com.example.frontpage.sleep.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -54,6 +55,10 @@ object SleepFeature {
         val goalMinutes by viewModel.goalMinutes.collectAsState()
 
         if (controller.showLogDialog) {
+            LaunchedEffect(Unit) {
+                viewModel.refreshCurrentUser()
+            }
+
             SleepLogDialog(
                 existingEntry = controller.editingEntry,
                 goalMinutes = goalMinutes,

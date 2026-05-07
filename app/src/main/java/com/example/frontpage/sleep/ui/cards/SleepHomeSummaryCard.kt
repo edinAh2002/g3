@@ -7,6 +7,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -23,6 +24,10 @@ fun SleepHomeSummaryCard(
 ) {
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshCurrentUser()
+    }
 
     val latestSleep = sleepLogs.lastOrNull()
     val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)

@@ -232,6 +232,6 @@ class SleepViewModel(
     }
 
     companion object {
-        private const val AUTH_PREFS_NAME = "auth_preferences"
+        private const val AUTH_PREFS_NAME = "secure_auth_preferences"
     }
 }
