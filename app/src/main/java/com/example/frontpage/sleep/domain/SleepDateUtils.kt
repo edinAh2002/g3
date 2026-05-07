@@ -10,6 +10,7 @@ object SleepDateUtils {
     private val historyDateFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
     private val shortDateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
     private val dayNameFormat = SimpleDateFormat("EEE", Locale.getDefault())
+    private val isoDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     fun formatHistoryDate(dateMillis: Long): String {
         return when {
@@ -25,6 +26,10 @@ object SleepDateUtils {
 
     fun formatDayName(dateMillis: Long): String {
         return dayNameFormat.format(Date(dateMillis))
+    }
+
+    fun formatIsoDate(dateMillis: Long): String {
+        return isoDateFormat.format(Date(dateMillis))
     }
 
     fun isToday(dateMillis: Long): Boolean {

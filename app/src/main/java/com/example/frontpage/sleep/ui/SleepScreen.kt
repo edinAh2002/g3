@@ -1,5 +1,6 @@
 package com.example.frontpage.sleep.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,26 +13,36 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.data.SleepSettingsRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.health.connect.client.PermissionController
+import com.example.frontpage.mood.MoodViewModel
+import com.example.frontpage.sleep.SleepViewModel
+import com.example.frontpage.sleep.data.SleepHealthConnectManager
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.domain.buildPrimarySleepRecommendation
+import com.example.frontpage.sleep.domain.buildSleepGoalBalance
+import com.example.frontpage.sleep.domain.buildSleepMoodInsight
+import com.example.frontpage.sleep.domain.buildSleepScoreSummary
+import com.example.frontpage.sleep.domain.buildSleepStreakSummary
+import com.example.frontpage.sleep.domain.buildSleepTagInsight
 import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepHistoryFilter
+import com.example.frontpage.sleep.ui.dialogs.SleepGoalDialog
 import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
 import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
 import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
 import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.runtime.collectAsState
-import com.example.frontpage.sleep.SleepViewModel
 
 private enum class SleepPage(
     val label: String
@@ -45,18 +56,34 @@ private enum class SleepPage(
 @Composable
 fun SleepScreen(
     modifier: Modifier = Modifier,
-    sleepViewModel: SleepViewModel = viewModel()
+    onLogSleepClick: () -> Unit,
+    onEditSleepEntry: (SleepEntry) -> Unit,
+    viewModel: SleepViewModel = viewModel(),
+    moodViewModel: MoodViewModel = viewModel()
 ) {
     var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
-
-    var showSleepLogDialog by remember { mutableStateOf(false) }
     var showGoalDialog by remember { mutableStateOf(false) }
-
-    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
-    var editingEntry by remember { mutableStateOf<SleepEntry?>(null) }
     var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
-    var goalMinutes by remember { mutableStateOf(SleepSettingsRepository.sleepGoalMinutes) }
+    val sleepLogs by viewModel.sleepLogs.collectAsState()
+    val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val healthConnectState by viewModel.healthConnectState.collectAsState()
+    val moodEntries by moodViewModel.allMoodEntries.collectAsState()
+
+    val healthConnectPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { grantedPermissions ->
+        viewModel.onHealthConnectPermissionsChanged(grantedPermissions)
+    }
+
+    LaunchedEffect(moodViewModel) {
+        moodViewModel.refreshCurrentUser()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.refreshCurrentUser()
+        viewModel.refreshHealthConnectState()
+    }
 
     val latestSleep = sleepLogs.lastOrNull()
 
@@ -86,14 +113,50 @@ fun SleepScreen(
     val sleepDurationRangeMinutes =
         SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
 
+    val sleepScoreSummary = buildSleepScoreSummary(
+        latestSleep = latestSleep,
+        goalMinutes = goalMinutes,
+        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
+        durationRangeMinutes = sleepDurationRangeMinutes
+    )
+
+    val sleepGoalBalance = buildSleepGoalBalance(
+        sleepLogs = last7DaysSleepLogs,
+        goalMinutes = goalMinutes
+    )
+
+    val streakSummary = buildSleepStreakSummary(
+        sleepLogs = sleepLogs,
+        goalMinutes = goalMinutes
+    )
+
+    val primaryRecommendation = buildPrimarySleepRecommendation(
+        latestSleep = latestSleep,
+        goalMinutes = goalMinutes,
+        sleepGoalBalance = sleepGoalBalance,
+        streakSummary = streakSummary,
+        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
+        durationRangeMinutes = sleepDurationRangeMinutes
+    )
+
+    val sleepMoodInsight = buildSleepMoodInsight(
+        sleepLogs = sleepLogs,
+        moodEntries = moodEntries
+    )
+
+    val sleepTagInsight = buildSleepTagInsight(sleepLogs)
+
     val filteredSleepLogs = when (selectedHistoryFilter) {
         SleepHistoryFilter.All -> sleepLogs
+
         SleepHistoryFilter.Today -> sleepLogs.filter {
             SleepDateUtils.isToday(it.dateMillis)
         }
+
         SleepHistoryFilter.ThisWeek -> sleepLogs.filter {
             SleepDateUtils.isThisWeek(it.dateMillis)
         }
+
         SleepHistoryFilter.ThisMonth -> sleepLogs.filter {
             SleepDateUtils.isThisMonth(it.dateMillis)
         }
@@ -126,10 +189,10 @@ fun SleepScreen(
                     shortestSleepMinutes = shortestSleepMinutes,
                     totalLogs = sleepLogs.size,
                     weeklyChartData = weeklyChartData,
-                    onLogSleepClick = {
-                        editingEntry = null
-                        showSleepLogDialog = true
-                    },
+                    sleepScoreSummary = sleepScoreSummary,
+                    sleepGoalBalance = sleepGoalBalance,
+                    streakSummary = streakSummary,
+                    onLogSleepClick = onLogSleepClick,
                     onEditGoalClick = {
                         showGoalDialog = true
                     }
@@ -143,11 +206,10 @@ fun SleepScreen(
                     selectedHistoryFilter = selectedHistoryFilter,
                     onFilterSelected = { selectedHistoryFilter = it },
                     onEditEntry = { entry ->
-                        editingEntry = entry
-                        showSleepLogDialog = true
+                        onEditSleepEntry(entry)
                     },
                     onDeleteEntry = { entry ->
-                        sleepViewModel.deleteSleep(entry.id)
+                        viewModel.deleteSleep(entry.id)
                     }
                 )
             }
@@ -162,66 +224,42 @@ fun SleepScreen(
                     averageWakeTimeMinutes = averageWakeTimeMinutes,
                     sleepConsistencyVariationMinutes = sleepConsistencyVariationMinutes,
                     sleepDurationRangeMinutes = sleepDurationRangeMinutes,
-                    consistencyLogCount = last7DaysSleepLogs.size
+                    consistencyLogCount = last7DaysSleepLogs.size,
+                    sleepScoreSummary = sleepScoreSummary,
+                    sleepGoalBalance = sleepGoalBalance,
+                    streakSummary = streakSummary,
+                    primaryRecommendation = primaryRecommendation,
+                    sleepMoodInsight = sleepMoodInsight,
+                    sleepTagInsight = sleepTagInsight
                 )
             }
 
             SleepPage.Settings -> {
                 SleepSettingsPage(
                     goalMinutes = goalMinutes,
+                    totalLogs = sleepLogs.size,
+                    healthConnectState = healthConnectState,
                     onEditGoalClick = {
                         showGoalDialog = true
+                    },
+                    onClearSleepHistoryClick = {
+                        viewModel.clearAllLogs()
+                    },
+                    onRequestHealthConnectAccessClick = {
+                        viewModel.onHealthConnectPermissionRequestStarted()
+
+                        try {
+                            healthConnectPermissionLauncher.launch(SleepHealthConnectManager.PERMISSIONS)
+                        } catch (_: Exception) {
+                            viewModel.onHealthConnectPermissionRequestFailed()
+                        }
+                    },
+                    onImportHealthConnectSleepClick = {
+                        viewModel.importHealthConnectSleep()
                     }
                 )
             }
         }
-    }
-
-    if (showSleepLogDialog) {
-        SleepLogDialog(
-            existingEntry = editingEntry,
-            goalMinutes = goalMinutes,
-            onDismiss = {
-                showSleepLogDialog = false
-                editingEntry = null
-            },
-            onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
-
-                if (editingEntry == null) {
-                    val now = System.currentTimeMillis()
-
-                    sleepViewModel.addSleep(
-                        SleepEntry(
-                            id = now,
-                            date = SleepDateUtils.formatHistoryDate(now),
-                            sleepHour = sleepHour,
-                            sleepMinute = sleepMinute,
-                            wakeHour = wakeHour,
-                            wakeMinute = wakeMinute,
-                            durationMinutes = durationMinutes,
-                            quality = quality,
-                            notes = notes,
-                            dateMillis = now
-                        )
-                    )
-                } else {
-                    sleepViewModel.updateSleep(
-                        editingEntry!!.copy(
-                            sleepHour = sleepHour,
-                            sleepMinute = sleepMinute,
-                            wakeHour = wakeHour,
-                            wakeMinute = wakeMinute,
-                            durationMinutes = durationMinutes,
-                            quality = quality,
-                            notes = notes
-                        )
-                    )
-                }
-
-                showSleepLogDialog = false
-                editingEntry = null
-            }
-        )
     }
 
     if (showGoalDialog) {
@@ -231,8 +269,7 @@ fun SleepScreen(
                 showGoalDialog = false
             },
             onSave = { newGoalMinutes ->
-                SleepSettingsRepository.updateSleepGoalMinutes(newGoalMinutes)
-                goalMinutes = SleepSettingsRepository.sleepGoalMinutes
+                viewModel.updateSleepGoalMinutes(newGoalMinutes)
                 showGoalDialog = false
             }
         )

@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep.ui
+package com.example.frontpage.sleep.ui.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

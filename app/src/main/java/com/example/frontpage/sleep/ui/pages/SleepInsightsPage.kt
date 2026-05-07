@@ -10,9 +10,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
+import com.example.frontpage.sleep.domain.SleepGoalBalance
+import com.example.frontpage.sleep.domain.SleepMoodInsight
+import com.example.frontpage.sleep.domain.SleepScoreSummary
+import com.example.frontpage.sleep.domain.SleepStreakSummary
+import com.example.frontpage.sleep.domain.SleepTagInsight
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.ui.components.SleepConsistencyCard
+import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
+import com.example.frontpage.sleep.ui.components.SleepMoodInsightCard
+import com.example.frontpage.sleep.ui.components.SleepRecommendationCard
+import com.example.frontpage.sleep.ui.components.SleepScoreCard
 import com.example.frontpage.sleep.ui.components.SleepStatCard
+import com.example.frontpage.sleep.ui.components.SleepStreakCard
+import com.example.frontpage.sleep.ui.components.SleepTagInsightCard
 import com.example.frontpage.sleep.ui.components.SleepTrendsCard
 
 @Composable
@@ -25,7 +36,13 @@ fun SleepInsightsPage(
     averageWakeTimeMinutes: Int?,
     sleepConsistencyVariationMinutes: Int?,
     sleepDurationRangeMinutes: Int?,
-    consistencyLogCount: Int
+    consistencyLogCount: Int,
+    sleepScoreSummary: SleepScoreSummary?,
+    sleepGoalBalance: SleepGoalBalance,
+    streakSummary: SleepStreakSummary,
+    primaryRecommendation: String,
+    sleepMoodInsight: SleepMoodInsight?,
+    sleepTagInsight: SleepTagInsight?
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -33,6 +50,14 @@ fun SleepInsightsPage(
         Text(
             text = "Sleep Insights",
             style = MaterialTheme.typography.titleMedium
+        )
+
+        SleepRecommendationCard(
+            recommendation = primaryRecommendation
+        )
+
+        SleepScoreCard(
+            scoreSummary = sleepScoreSummary
         )
 
         Row(
@@ -66,6 +91,26 @@ fun SleepInsightsPage(
                 title = "Logs",
                 value = sleepLogs.size.toString(),
                 modifier = Modifier.weight(1f)
+            )
+        }
+
+        SleepGoalBalanceCard(
+            goalBalance = sleepGoalBalance
+        )
+
+        SleepStreakCard(
+            streakSummary = streakSummary
+        )
+
+        if (sleepMoodInsight != null) {
+            SleepMoodInsightCard(
+                sleepMoodInsight = sleepMoodInsight
+            )
+        }
+
+        if (sleepTagInsight != null) {
+            SleepTagInsightCard(
+                sleepTagInsight = sleepTagInsight
             )
         }
 

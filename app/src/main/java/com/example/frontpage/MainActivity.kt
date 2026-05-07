@@ -26,6 +26,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,21 +36,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.auth.AuthEvent
+import com.example.frontpage.auth.AuthViewModel
+import com.example.frontpage.auth.data.AuthRepository
+import com.example.frontpage.auth.ui.AuthStartScreen
+import com.example.frontpage.auth.ui.LoginScreen
+import com.example.frontpage.auth.ui.SignUpScreen
+import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.ui.MoodFeature
-import com.example.frontpage.sleep.data.SleepSettingsRepository
-import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.SleepDateUtils
-import com.example.frontpage.sleep.model.SleepEntry
-import com.example.frontpage.sleep.ui.SleepLogDialog
-import com.example.frontpage.sleep.ui.SleepScreen
+import com.example.frontpage.sleep.ui.SleepFeature
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
-import androidx.compose.runtime.collectAsState
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.frontpage.sleep.SleepViewModel
 
 private enum class AppScreen {
+    AuthStart,
+    Login,
+    SignUp,
     Home,
     Workout,
     Nutrition,
@@ -61,90 +68,199 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val database = AppDatabase.getDatabase(applicationContext)
+
+        val authRepository = AuthRepository(
+            userDao = database.userDao(),
+            context = applicationContext
+        )
+
         setContent {
             FrontPageTheme {
-                FitnessApp()
+                FitnessApp(
+                    authRepository = authRepository
+                )
             }
         }
     }
 }
 
 @Composable
-fun FitnessApp() {
-    var selectedScreen by remember { mutableStateOf(AppScreen.Home) }
+fun FitnessApp(
+    authRepository: AuthRepository
+) {
+    val authViewModel: AuthViewModel = viewModel(
+        factory = AuthViewModel.factory(authRepository)
+    )
+
+    val authUiState by authViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        authViewModel.loadCurrentUser()
+    }
+
+    var selectedScreen by remember {
+        mutableStateOf(
+            if (authViewModel.hasSavedUser()) {
+                AppScreen.Home
+            } else {
+                AppScreen.AuthStart
+            }
+        )
+    }
+
+    LaunchedEffect(authViewModel) {
+        authViewModel.authEvents.collect { event ->
+            when (event) {
+                AuthEvent.Authenticated -> {
+                    authViewModel.loadCurrentUser()
+                    selectedScreen = AppScreen.Home
+                }
+            }
+        }
+    }
+
+    val isAuthScreen =
+        selectedScreen == AppScreen.AuthStart ||
+                selectedScreen == AppScreen.Login ||
+                selectedScreen == AppScreen.SignUp
+
     val context = LocalContext.current
 
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
-    var showSleepLogDialog by remember { mutableStateOf(false) }
-
     val moodController = MoodFeature.rememberController()
-    val sleepViewModel: SleepViewModel = viewModel()
-    val sleepLogs by sleepViewModel.sleepLogs.collectAsState()
-
-    val latestSleep = sleepLogs.lastOrNull()
-    val sleepDisplay = latestSleep?.let {
-        SleepCalculator.formatDuration(it.durationMinutes)
-    }
+    val sleepController = SleepFeature.rememberController()
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Home,
-                    onClick = { selectedScreen = AppScreen.Home },
-                    label = { Text("Home") },
-                    icon = { Text("🏠") }
-                )
+            if (!isAuthScreen) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Home,
+                        onClick = { selectedScreen = AppScreen.Home },
+                        label = { Text("Home") },
+                        icon = { Text("🏠") }
+                    )
 
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Workout,
-                    onClick = { selectedScreen = AppScreen.Workout },
-                    label = { Text("Workout") },
-                    icon = { Text("🏃") }
-                )
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Workout,
+                        onClick = { selectedScreen = AppScreen.Workout },
+                        label = { Text("Workout") },
+                        icon = { Text("🏃") }
+                    )
 
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Steps,
-                    onClick = { selectedScreen = AppScreen.Steps },
-                    label = { Text("Steps") },
-                    icon = { Text("👣") }
-                )
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Steps,
+                        onClick = { selectedScreen = AppScreen.Steps },
+                        label = { Text("Steps") },
+                        icon = { Text("👣") }
+                    )
 
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Nutrition,
-                    onClick = { selectedScreen = AppScreen.Nutrition },
-                    label = { Text("Nutrition") },
-                    icon = { Text("🥗") }
-                )
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Nutrition,
+                        onClick = { selectedScreen = AppScreen.Nutrition },
+                        label = { Text("Nutrition") },
+                        icon = { Text("🥗") }
+                    )
 
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Mood,
-                    onClick = { selectedScreen = AppScreen.Mood },
-                    label = { Text("Mood") },
-                    icon = { Text("🙂") }
-                )
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Mood,
+                        onClick = { selectedScreen = AppScreen.Mood },
+                        label = { Text("Mood") },
+                        icon = { Text("🙂") }
+                    )
 
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Sleep,
-                    onClick = { selectedScreen = AppScreen.Sleep },
-                    label = { Text("Sleep") },
-                    icon = { Text("🌙") }
-                )
+                    NavigationBarItem(
+                        selected = selectedScreen == AppScreen.Sleep,
+                        onClick = { selectedScreen = AppScreen.Sleep },
+                        label = { Text("Sleep") },
+                        icon = { Text("🌙") }
+                    )
+                }
             }
         }
     ) { padding ->
 
         when (selectedScreen) {
+            AppScreen.AuthStart -> {
+                AuthStartScreen(
+                    onLoginClick = {
+                        authViewModel.resetForm()
+                        selectedScreen = AppScreen.Login
+                    },
+                    onSignUpClick = {
+                        authViewModel.resetForm()
+                        selectedScreen = AppScreen.SignUp
+                    },
+                    onGuestClick = {
+                        authViewModel.continueAsGuest()
+                    },
+                    modifier = Modifier.padding(padding)
+                )
+            }
+
+            AppScreen.Login -> {
+                LoginScreen(
+                    username = authUiState.username,
+                    password = authUiState.password,
+                    isLoading = authUiState.isLoading,
+                    errorMessage = authUiState.errorMessage,
+                    onUsernameChange = authViewModel::onUsernameChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
+                    onLoginClick = {
+                        authViewModel.logIn()
+                    },
+                    onBackClick = {
+                        authViewModel.resetForm()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+                    modifier = Modifier.padding(padding)
+                )
+            }
+
+            AppScreen.SignUp -> {
+                SignUpScreen(
+                    username = authUiState.username,
+                    password = authUiState.password,
+                    confirmPassword = authUiState.confirmPassword,
+                    isLoading = authUiState.isLoading,
+                    errorMessage = authUiState.errorMessage,
+                    onUsernameChange = authViewModel::onUsernameChange,
+                    onPasswordChange = authViewModel::onPasswordChange,
+                    onConfirmPasswordChange = authViewModel::onConfirmPasswordChange,
+                    onSignUpClick = {
+                        authViewModel.signUp()
+                    },
+                    onBackClick = {
+                        authViewModel.resetForm()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+                    modifier = Modifier.padding(padding)
+                )
+            }
+
             AppScreen.Home -> {
                 HomeScreen(
                     context = context,
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
-                    sleepDisplay = sleepDisplay,
+                    currentUsername = authUiState.currentUsername,
+                    currentUserId = authUiState.currentUserId,
+                    isGuest = authUiState.isGuest,
+                    onLogOutClick = {
+                        authViewModel.logOut()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+                    onSwitchAccountClick = {
+                        authViewModel.logOut()
+                        selectedScreen = AppScreen.AuthStart
+                    },
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
-                    onLogSleepClick = { showSleepLogDialog = true },
+                    onLogSleepClick = {
+                        sleepController.openLogDialog()
+                    },
                     onLogMoodClick = {
                         moodController.openTrackingDialog()
                     }
@@ -172,9 +288,9 @@ fun FitnessApp() {
             }
 
             AppScreen.Sleep -> {
-                SleepScreen(
+                SleepFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    sleepViewModel = sleepViewModel
+                    controller = sleepController
                 )
             }
 
@@ -192,48 +308,24 @@ fun FitnessApp() {
             }
         }
 
-        if (showFoodLogging) {
-            FoodLoggingScreen(
-                onAddFood = { newFood ->
-                    foodItems = foodItems + newFood
-                },
-                onClose = {
-                    showFoodLogging = false
-                }
+        if (!isAuthScreen) {
+            if (showFoodLogging) {
+                FoodLoggingScreen(
+                    onAddFood = { newFood ->
+                        foodItems = foodItems + newFood
+                    },
+                    onClose = {
+                        showFoodLogging = false
+                    }
+                )
+            }
+
+            MoodFeature.DialogHost(
+                controller = moodController
             )
-        }
 
-        MoodFeature.DialogHost(
-            controller = moodController
-        )
-
-        if (showSleepLogDialog) {
-            SleepLogDialog(
-                goalMinutes = SleepSettingsRepository.sleepGoalMinutes,
-                onDismiss = {
-                    showSleepLogDialog = false
-                },
-                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
-
-                    val now = System.currentTimeMillis()
-
-                    sleepViewModel.addSleep(
-                        SleepEntry(
-                            id = now,
-                            date = SleepDateUtils.formatHistoryDate(now),
-                            sleepHour = sleepHour,
-                            sleepMinute = sleepMinute,
-                            wakeHour = wakeHour,
-                            wakeMinute = wakeMinute,
-                            durationMinutes = durationMinutes,
-                            quality = quality,
-                            notes = notes,
-                            dateMillis = now
-                        )
-                    )
-
-                    showSleepLogDialog = false
-                }
+            SleepFeature.DialogHost(
+                controller = sleepController
             )
         }
     }
@@ -244,7 +336,11 @@ fun HomeScreen(
     context: Context,
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
-    sleepDisplay: String?,
+    currentUsername: String?,
+    currentUserId: Long?,
+    isGuest: Boolean,
+    onLogOutClick: () -> Unit,
+    onSwitchAccountClick: () -> Unit,
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
     onLogSleepClick: () -> Unit,
@@ -252,16 +348,8 @@ fun HomeScreen(
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
-    var calories by remember {
-        mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
-    }
-
     var workout by remember {
         mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
-    }
-
-    var sleep by remember {
-        mutableStateOf(sharedPreferences.getString("sleep", "7.5h") ?: "7.5h")
     }
 
     var hydration by remember {
@@ -277,8 +365,6 @@ fun HomeScreen(
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
     val calorieDisplay = "$totalCalories / $calorieGoal"
-
-    val sleepCardDisplay = sleepDisplay ?: sleep
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
         Color(0xFFFFCDD2)
@@ -302,15 +388,15 @@ fun HomeScreen(
                 Text("Let's crush your goals today!")
             }
 
-            Button(
-                onClick = { showReminderList = true }
-            ) {
-                Text("🔔")
-            }
-        }
+            Row {
+                IconButton(onClick = { showReminderList = true }) {
+                    Text("🔔")
+                }
 
-        IconButton(onClick = { showSettings = true }) {
-            Text("⚙️")
+                IconButton(onClick = { showSettings = true }) {
+                    Text("⚙️")
+                }
+            }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -329,9 +415,7 @@ fun HomeScreen(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(
-                title = "Sleep",
-                value = sleepCardDisplay,
+            SleepFeature.HomeSummaryCard(
                 modifier = Modifier.weight(1f)
             )
 
@@ -416,53 +500,96 @@ fun HomeScreen(
     if (showSettings) {
         AlertDialog(
             onDismissRequest = { showSettings = false },
-            title = { Text("Edit Stats") },
+            title = {
+                Text(
+                    text = "Account Settings",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontSize = 24.sp
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    OutlinedTextField(
-                        value = calories,
-                        onValueChange = { calories = it },
-                        label = { Text("Calories") }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Name", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(currentUsername ?: "Unknown", fontSize = 14.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Account type", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(if (isGuest) "Guest" else "Normal", fontSize = 14.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("User ID", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("${currentUserId ?: "Unknown"}", fontSize = 14.sp)
+                    }
+
+                    Text(
+                        text = "Dashboard Stats",
+                        style = MaterialTheme.typography.titleMedium
                     )
 
                     OutlinedTextField(
                         value = workout,
                         onValueChange = { workout = it },
-                        label = { Text("Workout") }
-                    )
-
-                    OutlinedTextField(
-                        value = sleep,
-                        onValueChange = { sleep = it },
-                        label = { Text("Sleep") }
+                        label = { Text("Workout") },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     OutlinedTextField(
                         value = hydration,
                         onValueChange = { hydration = it },
-                        label = { Text("Hydration") }
+                        label = { Text("Hydration") },
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    Button(
+                        onClick = onLogOutClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Log out", fontSize = 20.sp)
+                    }
+
+                    Button(
+                        onClick = onSwitchAccountClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Switch account", fontSize = 20.sp)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         sharedPreferences.edit()
-                            .putString("calories", calories)
                             .putString("workout", workout)
-                            .putString("sleep", sleep)
                             .putString("hydration", hydration)
                             .apply()
 
                         showSettings = false
                     }
                 ) {
-                    Text("Save")
+                    Text("Save", fontSize = 20.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSettings = false }) {
-                    Text("Cancel")
+                    Text("Close", fontSize = 20.sp)
                 }
             }
         )

@@ -5,47 +5,67 @@ import com.example.frontpage.mood.model.MoodEntry
 class MoodRepository(
     private val moodDao: MoodDao
 ) {
-    suspend fun addMood(moodEntry: MoodEntry) {
-        moodDao.insertMood(moodEntry)
+    suspend fun addMood(
+        userId: Long,
+        moodEntry: MoodEntry
+    ) {
+        moodDao.insertMood(
+            moodEntry.copy(userId = userId)
+        )
     }
 
-    suspend fun updateMood(moodEntry: MoodEntry) {
-        moodDao.updateMood(moodEntry)
+    suspend fun updateMood(
+        userId: Long,
+        moodEntry: MoodEntry
+    ) {
+        moodDao.updateMood(
+            moodEntry.copy(userId = userId)
+        )
     }
 
-    suspend fun deleteMood(moodEntry: MoodEntry) {
-        moodDao.deleteMood(moodEntry)
+    suspend fun deleteMood(
+        userId: Long,
+        moodEntry: MoodEntry
+    ) {
+        moodDao.deleteMoodForUser(
+            id = moodEntry.id,
+            userId = userId
+        )
     }
 
-    suspend fun getAllMoods(): List<MoodEntry> {
-        return moodDao.getAllMoodEntries()
+    suspend fun getAllMoods(userId: Long): List<MoodEntry> {
+        return moodDao.getAllMoodEntriesForUser(userId)
     }
 
     suspend fun getMoodsBetweenDates(
+        userId: Long,
         startDate: String,
         endDate: String
     ): List<MoodEntry> {
-        return moodDao.getMoodEntriesBetweenDates(
+        return moodDao.getMoodEntriesBetweenDatesForUser(
+            userId = userId,
             startDate = startDate,
             endDate = endDate
         )
     }
 
-    suspend fun getAverageMood(): Double? {
-        return moodDao.getAverageMood()
+    suspend fun getAverageMood(userId: Long): Double? {
+        return moodDao.getAverageMoodForUser(userId)
     }
 
     suspend fun getAverageMoodBetweenDates(
+        userId: Long,
         startDate: String,
         endDate: String
     ): Double? {
-        return moodDao.getAverageMoodBetweenDates(
+        return moodDao.getAverageMoodBetweenDatesForUser(
+            userId = userId,
             startDate = startDate,
             endDate = endDate
         )
     }
 
-    suspend fun getLatestMood(): MoodEntry? {
-        return moodDao.getLatestMood()
+    suspend fun getLatestMood(userId: Long): MoodEntry? {
+        return moodDao.getLatestMoodForUser(userId)
     }
 }

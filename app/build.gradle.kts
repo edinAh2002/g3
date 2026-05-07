@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.frontpage"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -57,8 +57,16 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.core.ktx)
+
+    implementation("androidx.security:security-crypto:1.1.0")
+
+    implementation("net.zetetic:sqlcipher-android:4.15.0")
+    implementation("androidx.sqlite:sqlite:2.6.2")
+
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.health.connect:connect-client:1.1.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

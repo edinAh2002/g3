@@ -6,27 +6,43 @@ import kotlinx.coroutines.flow.Flow
 class SleepRepository(
     private val sleepDao: SleepDao
 ) {
-    fun getAllSleepLogs(): Flow<List<SleepEntry>> {
-        return sleepDao.getAllSleepLogs()
+    fun getSleepLogsForUser(userId: Long): Flow<List<SleepEntry>> {
+        return sleepDao.getSleepLogsForUser(userId)
     }
 
-    fun getLatestSleep(): Flow<SleepEntry?> {
-        return sleepDao.getLatestSleep()
+    fun getLatestSleepForUser(userId: Long): Flow<SleepEntry?> {
+        return sleepDao.getLatestSleepForUser(userId)
     }
 
-    suspend fun addSleep(entry: SleepEntry) {
-        sleepDao.addSleep(entry)
+    suspend fun addSleep(
+        userId: Long,
+        entry: SleepEntry
+    ) {
+        sleepDao.addSleep(
+            entry.copy(userId = userId)
+        )
     }
 
-    suspend fun updateSleep(entry: SleepEntry) {
-        sleepDao.updateSleep(entry)
+    suspend fun updateSleep(
+        userId: Long,
+        entry: SleepEntry
+    ) {
+        sleepDao.updateSleep(
+            entry.copy(userId = userId)
+        )
     }
 
-    suspend fun deleteSleep(id: Long) {
-        sleepDao.deleteSleep(id)
+    suspend fun deleteSleep(
+        userId: Long,
+        id: Long
+    ) {
+        sleepDao.deleteSleepForUser(
+            id = id,
+            userId = userId
+        )
     }
 
-    suspend fun clearAllLogs() {
-        sleepDao.clearAllLogs()
+    suspend fun clearAllLogs(userId: Long) {
+        sleepDao.clearSleepLogsForUser(userId)
     }
 }

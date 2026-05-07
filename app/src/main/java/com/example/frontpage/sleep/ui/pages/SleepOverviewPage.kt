@@ -17,9 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.domain.SleepGoalBalance
+import com.example.frontpage.sleep.domain.SleepScoreSummary
+import com.example.frontpage.sleep.domain.SleepStreakSummary
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepTag
 import com.example.frontpage.sleep.model.WeeklySleepChartItem
 import com.example.frontpage.sleep.ui.components.SleepFeedbackCard
+import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
+import com.example.frontpage.sleep.ui.components.SleepScoreCard
 import com.example.frontpage.sleep.ui.components.SleepStatCard
 import com.example.frontpage.sleep.ui.components.WeeklySleepChart
 
@@ -32,6 +38,9 @@ fun SleepOverviewPage(
     shortestSleepMinutes: Int,
     totalLogs: Int,
     weeklyChartData: List<WeeklySleepChartItem>,
+    sleepScoreSummary: SleepScoreSummary?,
+    sleepGoalBalance: SleepGoalBalance,
+    streakSummary: SleepStreakSummary,
     onLogSleepClick: () -> Unit,
     onEditGoalClick: () -> Unit
 ) {
@@ -42,6 +51,14 @@ fun SleepOverviewPage(
             latestSleep = latestSleep,
             goalMinutes = goalMinutes,
             onEditGoalClick = onEditGoalClick
+        )
+
+        SleepScoreCard(
+            scoreSummary = sleepScoreSummary
+        )
+
+        SleepGoalBalanceCard(
+            goalBalance = sleepGoalBalance
         )
 
         Button(
@@ -69,6 +86,23 @@ fun SleepOverviewPage(
             SleepStatCard(
                 title = "Logs",
                 value = totalLogs.toString(),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepStatCard(
+                title = "Logged Streak",
+                value = "${streakSummary.loggedDayStreak}d",
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepStatCard(
+                title = "Goal Streak",
+                value = "${streakSummary.nearGoalStreak}d",
                 modifier = Modifier.weight(1f)
             )
         }
@@ -140,6 +174,16 @@ private fun LatestSleepCard(
                 )
 
                 Text("Quality: ${latestSleep.quality}")
+                Text("Source: ${latestSleep.source.label}")
+
+                if (latestSleep.snoringLevel.name != "None") {
+                    Text("Snoring: ${latestSleep.snoringLevel.label}")
+                }
+
+                val tags = SleepTag.fromStorage(latestSleep.tags)
+                if (tags.isNotEmpty()) {
+                    Text("Tags: ${tags.take(3).joinToString { it.label }}")
+                }
 
                 LinearProgressIndicator(
                     progress = {
