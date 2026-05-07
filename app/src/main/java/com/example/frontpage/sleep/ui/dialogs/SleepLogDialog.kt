@@ -4,11 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -698,29 +695,23 @@ private fun SnoringSelector(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SleepTagSelector(
     selectedTags: List<SleepTag>,
     onTagToggled: (SleepTag) -> Unit,
     showTitle: Boolean = true
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            if (showTitle) {
-                Text(
-                    text = "Sleep Tags",
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
+        if (showTitle) {
+            Text(
+                text = "Sleep Tags",
+                style = MaterialTheme.typography.titleSmall
+            )
+        }
 
+        if (showTitle) {
             Text(
                 text = if (selectedTags.isEmpty()) {
                     "Optional context for patterns"
@@ -729,79 +720,41 @@ private fun SleepTagSelector(
                 },
                 style = MaterialTheme.typography.bodySmall
             )
+        }
 
-            SleepTag.entries.groupBy { it.category }.forEach { (category, tags) ->
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        SleepTag.entries.groupBy { it.category }.forEach { (category, tags) ->
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                tags.chunked(2).forEach { rowTags ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        tags.forEach { tag ->
-                            SleepTagChip(
-                                tag = tag,
+                        rowTags.forEach { tag ->
+                            QualityButton(
+                                text = tag.label,
                                 selected = selectedTags.contains(tag),
-                                onClick = { onTagToggled(tag) }
+                                onClick = { onTagToggled(tag) },
+                                modifier = Modifier.weight(1f)
                             )
+                        }
+
+                        if (rowTags.size == 1) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {}
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SleepTagChip(
-    tag: SleepTag,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-
-    val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    val borderColor = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outlineVariant
-    }
-
-    Surface(
-        modifier = Modifier
-            .heightIn(min = 28.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        contentColor = contentColor,
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        Text(
-            text = tag.label,
-            modifier = Modifier.padding(
-                horizontal = 10.dp,
-                vertical = 5.dp
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
@@ -817,14 +770,22 @@ private fun QualityButton(
             onClick = onClick,
             modifier = modifier
         ) {
-            Text(text)
+            Text(
+                text = text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     } else {
         OutlinedButton(
             onClick = onClick,
             modifier = modifier
         ) {
-            Text(text)
+            Text(
+                text = text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
