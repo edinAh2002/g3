@@ -180,7 +180,7 @@ private fun LatestSleepCard(
                     Text("Snoring: ${latestSleep.snoringLevel.label}")
                 }
 
-                val tags = SleepTag.fromStorage(latestSleep.tags)
+                val tags = SleepTag.optionsFromStorage(latestSleep.tags)
                 if (tags.isNotEmpty()) {
                     Text("Tags: ${tags.take(3).joinToString { it.label }}")
                 }

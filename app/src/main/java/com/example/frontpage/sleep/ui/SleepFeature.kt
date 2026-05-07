@@ -53,6 +53,8 @@ object SleepFeature {
         viewModel: SleepViewModel = viewModel()
     ) {
         val goalMinutes by viewModel.goalMinutes.collectAsState()
+        val weekdaySettings by viewModel.weekdaySettings.collectAsState()
+        val customTags by viewModel.customTags.collectAsState()
 
         if (controller.showLogDialog) {
             LaunchedEffect(Unit) {
@@ -62,6 +64,8 @@ object SleepFeature {
             SleepLogDialog(
                 existingEntry = controller.editingEntry,
                 goalMinutes = goalMinutes,
+                weekdaySettings = weekdaySettings,
+                customTags = customTags,
                 onDismiss = {
                     controller.closeLogDialog()
                 },

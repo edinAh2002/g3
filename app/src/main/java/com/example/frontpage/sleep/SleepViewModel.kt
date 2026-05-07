@@ -10,8 +10,11 @@ import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.sleep.data.SleepHealthConnectManager
 import com.example.frontpage.sleep.data.SleepRepository
 import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepHealthConnectState
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepWeekday
+import com.example.frontpage.sleep.model.WeekdaySleepSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +43,12 @@ class SleepViewModel(
     private val _goalMinutes = MutableStateFlow(SleepSettingsRepository.DEFAULT_SLEEP_GOAL_MINUTES)
     val goalMinutes: StateFlow<Int> = _goalMinutes
 
+    private val _weekdaySettings = MutableStateFlow<List<WeekdaySleepSettings>>(emptyList())
+    val weekdaySettings: StateFlow<List<WeekdaySleepSettings>> = _weekdaySettings
+
+    private val _customTags = MutableStateFlow<List<SleepCustomTag>>(emptyList())
+    val customTags: StateFlow<List<SleepCustomTag>> = _customTags
+
     private val _healthConnectState = MutableStateFlow(SleepHealthConnectState())
     val healthConnectState: StateFlow<SleepHealthConnectState> = _healthConnectState
 
@@ -67,7 +76,7 @@ class SleepViewModel(
         authPreferences.registerOnSharedPreferenceChangeListener(authPreferenceListener)
 
         currentUserId.value = authRepository.getCurrentUserId()
-        refreshSleepGoal()
+        refreshSleepSettings()
         refreshHealthConnectState()
 
         sleepLogs = currentUserId
@@ -87,13 +96,13 @@ class SleepViewModel(
 
     fun refreshCurrentUser() {
         currentUserId.value = authRepository.getCurrentUserId()
-        refreshSleepGoal()
+        refreshSleepSettings()
     }
 
     private fun getCurrentUserIdOrRefresh(): Long? {
         val userId = authRepository.getCurrentUserId()
         currentUserId.value = userId
-        refreshSleepGoal()
+        refreshSleepSettings()
         return userId
     }
 
@@ -105,6 +114,71 @@ class SleepViewModel(
         )
 
         _goalMinutes.value = updatedGoalMinutes
+        refreshSleepSettings()
+    }
+
+    fun updateWeekdayGoalMinutes(
+        weekday: SleepWeekday,
+        newGoalMinutes: Int
+    ) {
+        _weekdaySettings.value = SleepSettingsRepository.updateWeekdayGoalMinutes(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            weekday = weekday,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        refreshSleepGoal()
+    }
+
+    fun updateWeekdayScheduleTargets(
+        weekday: SleepWeekday,
+        bedtimeMinutes: Int,
+        wakeMinutes: Int
+    ) {
+        _weekdaySettings.value = SleepSettingsRepository.updateWeekdayScheduleTargets(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            weekday = weekday,
+            bedtimeMinutes = bedtimeMinutes,
+            wakeMinutes = wakeMinutes
+        )
+    }
+
+    fun updateAllWeekdayScheduleTargets(
+        bedtimeMinutes: Int,
+        wakeMinutes: Int
+    ) {
+        _weekdaySettings.value = SleepSettingsRepository.updateAllWeekdayScheduleTargets(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            bedtimeMinutes = bedtimeMinutes,
+            wakeMinutes = wakeMinutes
+        )
+    }
+
+    fun addCustomTag(label: String) {
+        _customTags.value = SleepSettingsRepository.addCustomTag(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            label = label
+        )
+    }
+
+    fun deleteCustomTag(tagId: String) {
+        _customTags.value = SleepSettingsRepository.deleteCustomTag(
+            context = appContext,
+            userId = getCurrentUserIdOrRefresh(),
+            tagId = tagId
+        )
+    }
+
+    fun getGoalMinutesForDate(dateMillis: Long): Int {
+        val weekday = SleepWeekday.fromDateMillis(dateMillis)
+
+        return _weekdaySettings.value.firstOrNull { settings ->
+            settings.weekday == weekday
+        }?.goalMinutes ?: _goalMinutes.value
     }
 
     fun refreshHealthConnectState() {
@@ -221,6 +295,20 @@ class SleepViewModel(
 
     private fun refreshSleepGoal() {
         _goalMinutes.value = SleepSettingsRepository.getSleepGoalMinutes(
+            context = appContext,
+            userId = currentUserId.value
+        )
+    }
+
+    private fun refreshSleepSettings() {
+        refreshSleepGoal()
+
+        _weekdaySettings.value = SleepSettingsRepository.getWeekdaySleepSettings(
+            context = appContext,
+            userId = currentUserId.value
+        )
+
+        _customTags.value = SleepSettingsRepository.getCustomTags(
             context = appContext,
             userId = currentUserId.value
         )

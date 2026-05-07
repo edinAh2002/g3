@@ -51,7 +51,7 @@ fun SleepHistoryCard(
             Text("Source: ${entry.source.label}")
             Text("Snoring: ${entry.snoringLevel.label}")
 
-            val tags = SleepTag.fromStorage(entry.tags)
+            val tags = SleepTag.optionsFromStorage(entry.tags)
             if (tags.isNotEmpty()) {
                 Text("Tags: ${tags.joinToString { it.label }}")
             }

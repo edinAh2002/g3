@@ -24,12 +24,19 @@ fun SleepHomeSummaryCard(
 ) {
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val weekdaySettings by viewModel.weekdaySettings.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshCurrentUser()
     }
 
     val latestSleep = sleepLogs.lastOrNull()
+    val latestGoalMinutes = latestSleep?.let { sleepEntry ->
+        weekdaySettings.firstOrNull { settings ->
+            settings.weekday == com.example.frontpage.sleep.model.SleepWeekday.fromDateMillis(sleepEntry.dateMillis)
+        }?.goalMinutes
+    } ?: goalMinutes
+
     val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
     val last7DaysSleepLogs = sleepLogs.filter { it.dateMillis >= sevenDaysAgo }
 
@@ -37,7 +44,7 @@ fun SleepHomeSummaryCard(
     val durationRangeMinutes = SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
     val sleepScoreSummary = buildSleepScoreSummary(
         latestSleep = latestSleep,
-        goalMinutes = goalMinutes,
+        goalMinutes = latestGoalMinutes,
         consistencyVariationMinutes = variationMinutes,
         durationRangeMinutes = durationRangeMinutes
     )

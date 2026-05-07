@@ -36,10 +36,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepQuality
 import com.example.frontpage.sleep.model.SleepTag
+import com.example.frontpage.sleep.model.SleepTagOption
+import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.SnoringLevel
+import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
 private enum class TimePickerTarget {
     SleepTime,
@@ -59,6 +63,8 @@ private enum class SleepDetailDialog {
 fun SleepLogDialog(
     existingEntry: SleepEntry? = null,
     goalMinutes: Int,
+    weekdaySettings: List<WeekdaySleepSettings> = emptyList(),
+    customTags: List<SleepCustomTag> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (
         sleepHour: Int,
@@ -74,24 +80,27 @@ fun SleepLogDialog(
         tags: String
     ) -> Unit
 ) {
+    val initialWakeDateMillis = existingEntry?.dateMillis ?: System.currentTimeMillis()
+    val initialSettings = weekdaySettings.settingsForDate(initialWakeDateMillis)
+
     var sleepHour by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.sleepHour ?: 23)
+        mutableStateOf(existingEntry?.sleepHour ?: ((initialSettings?.bedtimeMinutes ?: (23 * 60)) / 60))
     }
 
     var sleepMinute by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.sleepMinute ?: 0)
+        mutableStateOf(existingEntry?.sleepMinute ?: ((initialSettings?.bedtimeMinutes ?: (23 * 60)) % 60))
     }
 
     var wakeHour by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.wakeHour ?: 7)
+        mutableStateOf(existingEntry?.wakeHour ?: ((initialSettings?.wakeMinutes ?: (7 * 60)) / 60))
     }
 
     var wakeMinute by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.wakeMinute ?: 0)
+        mutableStateOf(existingEntry?.wakeMinute ?: ((initialSettings?.wakeMinutes ?: (7 * 60)) % 60))
     }
 
     var wakeDateMillis by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.dateMillis ?: System.currentTimeMillis())
+        mutableStateOf(initialWakeDateMillis)
     }
 
     var selectedQuality by remember(existingEntry?.id) {
@@ -111,7 +120,7 @@ fun SleepLogDialog(
     }
 
     var selectedTags by remember(existingEntry?.id) {
-        mutableStateOf(SleepTag.fromStorage(existingEntry?.tags.orEmpty()))
+        mutableStateOf(SleepTag.optionsFromStorage(existingEntry?.tags.orEmpty()))
     }
 
     var activeTimePicker by remember { mutableStateOf<TimePickerTarget?>(null) }
@@ -126,19 +135,22 @@ fun SleepLogDialog(
     )
 
     val durationText = SleepCalculator.formatDuration(durationMinutes)
+    val activeGoalMinutes = weekdaySettings.settingsForDate(wakeDateMillis)?.goalMinutes
+        ?: goalMinutes
+
     val statusTitle = SleepCalculator.getGoalStatusTitle(
         durationMinutes = durationMinutes,
-        goalMinutes = goalMinutes
+        goalMinutes = activeGoalMinutes
     )
 
     val feedbackText = SleepCalculator.getGoalDifferenceText(
         durationMinutes = durationMinutes,
-        goalMinutes = goalMinutes
+        goalMinutes = activeGoalMinutes
     )
 
     val suggestionText = SleepCalculator.getImprovementSuggestion(
         durationMinutes = durationMinutes,
-        goalMinutes = goalMinutes
+        goalMinutes = activeGoalMinutes
     )
 
     val durationValidationMessage = SleepCalculator.getDurationValidationMessage(durationMinutes)
@@ -228,7 +240,7 @@ fun SleepLogDialog(
                             style = MaterialTheme.typography.headlineSmall
                         )
 
-                        Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
+                        Text("Goal: ${SleepCalculator.formatDuration(activeGoalMinutes)}")
 
                         Text(
                             text = statusTitle,
@@ -271,7 +283,7 @@ fun SleepLogDialog(
                         notes.trim(),
                         dreamJournal.trim(),
                         selectedSnoringLevel,
-                        SleepTag.toStorage(selectedTags)
+                        SleepTag.toStorageOptions(selectedTags)
                     )
                 }
             ) {
@@ -311,6 +323,7 @@ fun SleepLogDialog(
         SleepDetailDialog.Tags -> {
             SleepTagsDetailDialog(
                 initialTags = selectedTags,
+                customTags = customTags,
                 onDismiss = { activeDetailDialog = null },
                 onSave = { tags ->
                     selectedTags = tags
@@ -506,9 +519,10 @@ private fun SnoringDetailDialog(
 
 @Composable
 private fun SleepTagsDetailDialog(
-    initialTags: List<SleepTag>,
+    initialTags: List<SleepTagOption>,
+    customTags: List<SleepCustomTag>,
     onDismiss: () -> Unit,
-    onSave: (List<SleepTag>) -> Unit
+    onSave: (List<SleepTagOption>) -> Unit
 ) {
     var draftTags by remember(initialTags) {
         mutableStateOf(initialTags)
@@ -525,9 +539,10 @@ private fun SleepTagsDetailDialog(
             ) {
                 SleepTagSelector(
                     selectedTags = draftTags,
+                    customTags = customTags,
                     onTagToggled = { tag ->
-                        draftTags = if (draftTags.contains(tag)) {
-                            draftTags - tag
+                        draftTags = if (draftTags.any { selectedTag -> selectedTag.storageValue == tag.storageValue }) {
+                            draftTags.filterNot { selectedTag -> selectedTag.storageValue == tag.storageValue }
                         } else {
                             draftTags + tag
                         }
@@ -595,7 +610,7 @@ private fun SleepTextDetailDialog(
     )
 }
 
-private fun sleepTagSummary(tags: List<SleepTag>): String {
+private fun sleepTagSummary(tags: List<SleepTagOption>): String {
     if (tags.isEmpty()) return "None"
 
     val visibleTags = tags.take(3).joinToString(", ") { tag ->
@@ -697,10 +712,15 @@ private fun SnoringSelector(
 
 @Composable
 private fun SleepTagSelector(
-    selectedTags: List<SleepTag>,
-    onTagToggled: (SleepTag) -> Unit,
+    selectedTags: List<SleepTagOption>,
+    customTags: List<SleepCustomTag>,
+    onTagToggled: (SleepTagOption) -> Unit,
     showTitle: Boolean = true
 ) {
+    val availableTags = SleepTag.builtInOptions() + customTags.map { customTag ->
+        SleepTag.customOption(customTag)
+    }
+
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -722,7 +742,7 @@ private fun SleepTagSelector(
             )
         }
 
-        SleepTag.entries.groupBy { it.category }.forEach { (category, tags) ->
+        availableTags.groupBy { it.category }.forEach { (category, tags) ->
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -740,7 +760,9 @@ private fun SleepTagSelector(
                         rowTags.forEach { tag ->
                             QualityButton(
                                 text = tag.label,
-                                selected = selectedTags.contains(tag),
+                                selected = selectedTags.any { selectedTag ->
+                                    selectedTag.storageValue == tag.storageValue
+                                },
                                 onClick = { onTagToggled(tag) },
                                 modifier = Modifier.weight(1f)
                             )
@@ -755,6 +777,14 @@ private fun SleepTagSelector(
                 }
             }
         }
+    }
+}
+
+private fun List<WeekdaySleepSettings>.settingsForDate(dateMillis: Long): WeekdaySleepSettings? {
+    val weekday = SleepWeekday.fromDateMillis(dateMillis)
+
+    return firstOrNull { settings ->
+        settings.weekday == weekday
     }
 }
 

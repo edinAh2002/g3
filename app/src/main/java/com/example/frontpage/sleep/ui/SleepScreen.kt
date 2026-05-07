@@ -67,6 +67,8 @@ fun SleepScreen(
 
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val weekdaySettings by viewModel.weekdaySettings.collectAsState()
+    val customTags by viewModel.customTags.collectAsState()
     val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
 
@@ -86,6 +88,9 @@ fun SleepScreen(
     }
 
     val latestSleep = sleepLogs.lastOrNull()
+    val latestGoalMinutes = latestSleep?.let { sleepEntry ->
+        viewModel.getGoalMinutesForDate(sleepEntry.dateMillis)
+    } ?: goalMinutes
 
     val averageSleepMinutes = if (sleepLogs.isEmpty()) {
         0
@@ -115,24 +120,24 @@ fun SleepScreen(
 
     val sleepScoreSummary = buildSleepScoreSummary(
         latestSleep = latestSleep,
-        goalMinutes = goalMinutes,
+        goalMinutes = latestGoalMinutes,
         consistencyVariationMinutes = sleepConsistencyVariationMinutes,
         durationRangeMinutes = sleepDurationRangeMinutes
     )
 
     val sleepGoalBalance = buildSleepGoalBalance(
         sleepLogs = last7DaysSleepLogs,
-        goalMinutes = goalMinutes
+        goalMinutesForDate = viewModel::getGoalMinutesForDate
     )
 
     val streakSummary = buildSleepStreakSummary(
         sleepLogs = sleepLogs,
-        goalMinutes = goalMinutes
+        goalMinutesForDate = viewModel::getGoalMinutesForDate
     )
 
     val primaryRecommendation = buildPrimarySleepRecommendation(
         latestSleep = latestSleep,
-        goalMinutes = goalMinutes,
+        goalMinutes = latestGoalMinutes,
         sleepGoalBalance = sleepGoalBalance,
         streakSummary = streakSummary,
         consistencyVariationMinutes = sleepConsistencyVariationMinutes,
@@ -183,7 +188,7 @@ fun SleepScreen(
             SleepPage.Overview -> {
                 SleepOverviewPage(
                     latestSleep = latestSleep,
-                    goalMinutes = goalMinutes,
+                    goalMinutes = latestGoalMinutes,
                     averageSleepMinutes = averageSleepMinutes,
                     longestSleepMinutes = longestSleepMinutes,
                     shortestSleepMinutes = shortestSleepMinutes,
@@ -237,13 +242,40 @@ fun SleepScreen(
             SleepPage.Settings -> {
                 SleepSettingsPage(
                     goalMinutes = goalMinutes,
+                    weekdaySettings = weekdaySettings,
+                    customTags = customTags,
                     totalLogs = sleepLogs.size,
                     healthConnectState = healthConnectState,
-                    onEditGoalClick = {
-                        showGoalDialog = true
+                    onUpdateAllWeekdayGoals = { newGoalMinutes ->
+                        viewModel.updateSleepGoalMinutes(newGoalMinutes)
                     },
                     onClearSleepHistoryClick = {
                         viewModel.clearAllLogs()
+                    },
+                    onUpdateWeekdayGoal = { weekday, newGoalMinutes ->
+                        viewModel.updateWeekdayGoalMinutes(
+                            weekday = weekday,
+                            newGoalMinutes = newGoalMinutes
+                        )
+                    },
+                    onUpdateWeekdayScheduleTargets = { weekday, bedtimeMinutes, wakeMinutes ->
+                        viewModel.updateWeekdayScheduleTargets(
+                            weekday = weekday,
+                            bedtimeMinutes = bedtimeMinutes,
+                            wakeMinutes = wakeMinutes
+                        )
+                    },
+                    onUpdateAllWeekdayScheduleTargets = { bedtimeMinutes, wakeMinutes ->
+                        viewModel.updateAllWeekdayScheduleTargets(
+                            bedtimeMinutes = bedtimeMinutes,
+                            wakeMinutes = wakeMinutes
+                        )
+                    },
+                    onAddCustomTag = { label ->
+                        viewModel.addCustomTag(label)
+                    },
+                    onDeleteCustomTag = { tagId ->
+                        viewModel.deleteCustomTag(tagId)
                     },
                     onRequestHealthConnectAccessClick = {
                         viewModel.onHealthConnectPermissionRequestStarted()
