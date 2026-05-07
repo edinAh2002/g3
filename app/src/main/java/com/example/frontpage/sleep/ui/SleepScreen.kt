@@ -28,7 +28,6 @@ import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.data.SleepHealthConnectManager
 import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.domain.buildPrimarySleepRecommendation
 import com.example.frontpage.sleep.domain.buildSleepGoalBalance
 import com.example.frontpage.sleep.domain.buildSleepMoodInsight
@@ -37,7 +36,6 @@ import com.example.frontpage.sleep.domain.buildSleepStreakSummary
 import com.example.frontpage.sleep.domain.buildSleepTagInsight
 import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
 import com.example.frontpage.sleep.model.SleepEntry
-import com.example.frontpage.sleep.model.SleepHistoryFilter
 import com.example.frontpage.sleep.ui.dialogs.SleepGoalDialog
 import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
 import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
@@ -63,7 +61,6 @@ fun SleepScreen(
 ) {
     var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
     var showGoalDialog by remember { mutableStateOf(false) }
-    var selectedHistoryFilter by remember { mutableStateOf(SleepHistoryFilter.All) }
 
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
@@ -151,22 +148,6 @@ fun SleepScreen(
 
     val sleepTagInsight = buildSleepTagInsight(sleepLogs)
 
-    val filteredSleepLogs = when (selectedHistoryFilter) {
-        SleepHistoryFilter.All -> sleepLogs
-
-        SleepHistoryFilter.Today -> sleepLogs.filter {
-            SleepDateUtils.isToday(it.dateMillis)
-        }
-
-        SleepHistoryFilter.ThisWeek -> sleepLogs.filter {
-            SleepDateUtils.isThisWeek(it.dateMillis)
-        }
-
-        SleepHistoryFilter.ThisMonth -> sleepLogs.filter {
-            SleepDateUtils.isThisMonth(it.dateMillis)
-        }
-    }
-
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -207,9 +188,7 @@ fun SleepScreen(
             SleepPage.History -> {
                 SleepHistoryPage(
                     sleepLogs = sleepLogs,
-                    filteredSleepLogs = filteredSleepLogs,
-                    selectedHistoryFilter = selectedHistoryFilter,
-                    onFilterSelected = { selectedHistoryFilter = it },
+                    goalMinutesForDate = viewModel::getGoalMinutesForDate,
                     onEditEntry = { entry ->
                         onEditSleepEntry(entry)
                     },
