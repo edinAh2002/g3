@@ -123,15 +123,30 @@ fun SleepLogDialog(
         mutableStateOf(SleepTag.optionsFromStorage(existingEntry?.tags.orEmpty()))
     }
 
-    var activeTimePicker by remember { mutableStateOf<TimePickerTarget?>(null) }
+    var selectedTimePicker by remember(existingEntry?.id) {
+        mutableStateOf(TimePickerTarget.SleepTime)
+    }
+
+    val sleepTimePickerState = rememberTimePickerState(
+        initialHour = sleepHour,
+        initialMinute = sleepMinute,
+        is24Hour = true
+    )
+
+    val wakeTimePickerState = rememberTimePickerState(
+        initialHour = wakeHour,
+        initialMinute = wakeMinute,
+        is24Hour = true
+    )
+
     var showDatePicker by remember { mutableStateOf(false) }
     var activeDetailDialog by remember { mutableStateOf<SleepDetailDialog?>(null) }
 
     val durationMinutes = SleepCalculator.calculateDurationMinutes(
-        sleepHour = sleepHour,
-        sleepMinute = sleepMinute,
-        wakeHour = wakeHour,
-        wakeMinute = wakeMinute
+        sleepHour = sleepTimePickerState.hour,
+        sleepMinute = sleepTimePickerState.minute,
+        wakeHour = wakeTimePickerState.hour,
+        wakeMinute = wakeTimePickerState.minute
     )
 
     val durationText = SleepCalculator.formatDuration(durationMinutes)
@@ -166,23 +181,95 @@ fun SleepLogDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { activeTimePicker = TimePickerTarget.SleepTime },
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Sleep\n${SleepCalculator.formatTime(sleepHour, sleepMinute)}")
+                        if (selectedTimePicker == TimePickerTarget.SleepTime) {
+                            OutlinedButton(
+                                onClick = {
+                                    selectedTimePicker = TimePickerTarget.SleepTime
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    "Sleep\n${
+                                        SleepCalculator.formatTime(
+                                            sleepTimePickerState.hour,
+                                            sleepTimePickerState.minute
+                                        )
+                                    }"
+                                )
+                            }
+                        } else {
+                            TextButton(
+                                onClick = {
+                                    selectedTimePicker = TimePickerTarget.SleepTime
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    "Sleep\n${
+                                        SleepCalculator.formatTime(
+                                            sleepTimePickerState.hour,
+                                            sleepTimePickerState.minute
+                                        )
+                                    }"
+                                )
+                            }
+                        }
+
+                        if (selectedTimePicker == TimePickerTarget.WakeTime) {
+                            OutlinedButton(
+                                onClick = {
+                                    selectedTimePicker = TimePickerTarget.WakeTime
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    "Wake\n${
+                                        SleepCalculator.formatTime(
+                                            wakeTimePickerState.hour,
+                                            wakeTimePickerState.minute
+                                        )
+                                    }"
+                                )
+                            }
+                        } else {
+                            TextButton(
+                                onClick = {
+                                    selectedTimePicker = TimePickerTarget.WakeTime
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    "Wake\n${
+                                        SleepCalculator.formatTime(
+                                            wakeTimePickerState.hour,
+                                            wakeTimePickerState.minute
+                                        )
+                                    }"
+                                )
+                            }
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = { activeTimePicker = TimePickerTarget.WakeTime },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Wake\n${SleepCalculator.formatTime(wakeHour, wakeMinute)}")
-                    }
+                    TimePicker(
+                        state = if (selectedTimePicker == TimePickerTarget.SleepTime) {
+                            sleepTimePickerState
+                        } else {
+                            wakeTimePickerState
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = "Tap Sleep or Wake above, then choose the time on the clock.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 OutlinedButton(
@@ -273,10 +360,10 @@ fun SleepLogDialog(
                 enabled = isDurationValid,
                 onClick = {
                     onSave(
-                        sleepHour,
-                        sleepMinute,
-                        wakeHour,
-                        wakeMinute,
+                        sleepTimePickerState.hour,
+                        sleepTimePickerState.minute,
+                        wakeTimePickerState.hour,
+                        wakeTimePickerState.minute,
                         wakeDateMillis,
                         selectedQuality,
                         durationMinutes,
@@ -372,32 +459,6 @@ fun SleepLogDialog(
             onConfirm = { selectedDateMillis ->
                 wakeDateMillis = selectedDateMillis
                 showDatePicker = false
-            }
-        )
-    }
-
-    activeTimePicker?.let { pickerTarget ->
-        ClockPickerDialog(
-            title = if (pickerTarget == TimePickerTarget.SleepTime) {
-                "Choose Sleep Time"
-            } else {
-                "Choose Wake Time"
-            },
-            initialHour = if (pickerTarget == TimePickerTarget.SleepTime) sleepHour else wakeHour,
-            initialMinute = if (pickerTarget == TimePickerTarget.SleepTime) sleepMinute else wakeMinute,
-            onDismiss = {
-                activeTimePicker = null
-            },
-            onConfirm = { hour, minute ->
-                if (pickerTarget == TimePickerTarget.SleepTime) {
-                    sleepHour = hour
-                    sleepMinute = minute
-                } else {
-                    wakeHour = hour
-                    wakeMinute = minute
-                }
-
-                activeTimePicker = null
             }
         )
     }

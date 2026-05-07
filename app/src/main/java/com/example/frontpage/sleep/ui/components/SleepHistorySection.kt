@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,42 +28,76 @@ fun SleepHistoryCard(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 168.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = SleepDateUtils.formatHistoryDate(entry.dateMillis),
-                style = MaterialTheme.typography.titleSmall
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = SleepDateUtils.formatHistoryDate(entry.dateMillis),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        text = "${SleepCalculator.formatTime(entry.sleepHour, entry.sleepMinute)} to ${SleepCalculator.formatTime(entry.wakeHour, entry.wakeMinute)}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Text(
+                    text = SleepCalculator.formatDuration(entry.durationMinutes),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+
+            SleepDetailRow(
+                label = "Quality",
+                value = entry.quality.toString()
             )
 
-            Text(
-                text = SleepCalculator.formatDuration(entry.durationMinutes),
-                style = MaterialTheme.typography.headlineSmall
+            SleepDetailRow(
+                label = "Source",
+                value = entry.source.label
             )
 
-            Text(
-                text = "${SleepCalculator.formatTime(entry.sleepHour, entry.sleepMinute)} to ${SleepCalculator.formatTime(entry.wakeHour, entry.wakeMinute)}"
+            SleepDetailRow(
+                label = "Snoring",
+                value = entry.snoringLevel.label
             )
-
-            Text("Quality: ${entry.quality}")
-
-            Text("Source: ${entry.source.label}")
-            Text("Snoring: ${entry.snoringLevel.label}")
 
             val tags = SleepTag.optionsFromStorage(entry.tags)
             if (tags.isNotEmpty()) {
-                Text("Tags: ${tags.joinToString { it.label }}")
+                Text(
+                    text = "Tags: ${tags.take(4).joinToString { it.label }}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             if (entry.dreamJournal.isNotBlank()) {
-                Text("Dreams: ${entry.dreamJournal}")
+                Text(
+                    text = "Dreams: ${entry.dreamJournal}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             if (entry.notes.isNotBlank()) {
-                Text("Notes: ${entry.notes}")
+                Text(
+                    text = "Notes: ${entry.notes}",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             Row(
@@ -92,10 +128,10 @@ fun SleepHistoryFilterRow(
     onFilterSelected: (SleepHistoryFilter) -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             SleepHistoryFilterButton(
@@ -114,7 +150,7 @@ fun SleepHistoryFilterRow(
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             SleepHistoryFilterButton(

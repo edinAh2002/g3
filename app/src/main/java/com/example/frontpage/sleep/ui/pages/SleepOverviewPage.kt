@@ -2,8 +2,12 @@ package com.example.frontpage.sleep.ui.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,10 +27,11 @@ import com.example.frontpage.sleep.domain.SleepStreakSummary
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepTag
 import com.example.frontpage.sleep.model.WeeklySleepChartItem
-import com.example.frontpage.sleep.ui.components.SleepFeedbackCard
+import com.example.frontpage.sleep.ui.components.SleepDetailRow
 import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
+import com.example.frontpage.sleep.ui.components.SleepMetricTile
 import com.example.frontpage.sleep.ui.components.SleepScoreCard
-import com.example.frontpage.sleep.ui.components.SleepStatCard
+import com.example.frontpage.sleep.ui.components.SleepSectionHeader
 import com.example.frontpage.sleep.ui.components.WeeklySleepChart
 
 @Composable
@@ -50,40 +55,52 @@ fun SleepOverviewPage(
         LatestSleepCard(
             latestSleep = latestSleep,
             goalMinutes = goalMinutes,
+            onLogSleepClick = onLogSleepClick,
             onEditGoalClick = onEditGoalClick
         )
 
-        SleepScoreCard(
-            scoreSummary = sleepScoreSummary
+        SleepSectionHeader(
+            title = "This Week",
+            subtitle = "Score and goal balance use your current sleep goal."
         )
 
-        SleepGoalBalanceCard(
-            goalBalance = sleepGoalBalance
-        )
-
-        Button(
-            onClick = onLogSleepClick,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
         ) {
-            Text("Log Sleep")
+            SleepScoreCard(
+                scoreSummary = sleepScoreSummary,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+
+            SleepGoalBalanceCard(
+                goalBalance = sleepGoalBalance,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
         }
 
-        Text(
-            text = "Sleep Statistics",
-            style = MaterialTheme.typography.titleMedium
+        SleepSectionHeader(
+            title = "Key Numbers",
+            subtitle = "A quick scan of your sleep log."
         )
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            SleepStatCard(
+            SleepMetricTile(
                 title = "Average",
                 value = SleepCalculator.formatDuration(averageSleepMinutes),
                 modifier = Modifier.weight(1f)
             )
 
-            SleepStatCard(
+            SleepMetricTile(
                 title = "Logs",
                 value = totalLogs.toString(),
                 modifier = Modifier.weight(1f)
@@ -94,45 +111,50 @@ fun SleepOverviewPage(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            SleepStatCard(
+            SleepMetricTile(
                 title = "Logged Streak",
                 value = "${streakSummary.loggedDayStreak}d",
                 modifier = Modifier.weight(1f)
             )
 
-            SleepStatCard(
+            SleepMetricTile(
                 title = "Goal Streak",
                 value = "${streakSummary.nearGoalStreak}d",
                 modifier = Modifier.weight(1f)
             )
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Longest",
-                value = SleepCalculator.formatDuration(longestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Shortest",
-                value = SleepCalculator.formatDuration(shortestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Text(
-            text = "Weekly Sleep Chart",
-            style = MaterialTheme.typography.titleMedium
+        SleepSectionHeader(
+            title = "Last 7 Days",
+            subtitle = "Each bar shows total sleep by wake day."
         )
 
         WeeklySleepChart(
             chartData = weeklyChartData,
             goalMinutes = goalMinutes
         )
+
+        SleepSectionHeader(
+            title = "Records",
+            subtitle = "Your longest and shortest saved sleep logs."
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SleepMetricTile(
+                title = "Longest",
+                value = SleepCalculator.formatDuration(longestSleepMinutes),
+                modifier = Modifier.weight(1f)
+            )
+
+            SleepMetricTile(
+                title = "Shortest",
+                value = SleepCalculator.formatDuration(shortestSleepMinutes),
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -140,24 +162,45 @@ fun SleepOverviewPage(
 private fun LatestSleepCard(
     latestSleep: SleepEntry?,
     goalMinutes: Int,
+    onLogSleepClick: () -> Unit,
     onEditGoalClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 220.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Latest Sleep", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Latest Sleep",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                OutlinedButton(onClick = onEditGoalClick) {
+                    Text("Goal")
+                }
+            }
 
             if (latestSleep == null) {
                 Text("No sleep logged yet.")
                 Text("Tap Log Sleep to add your first sleep entry.")
 
+                Button(
+                    onClick = onLogSleepClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Log Sleep")
+                }
             } else {
                 Text(
                     text = SleepDateUtils.formatHistoryDate(latestSleep.dateMillis),
@@ -169,15 +212,26 @@ private fun LatestSleepCard(
                     style = MaterialTheme.typography.headlineMedium
                 )
 
-                Text(
-                    text = "From ${SleepCalculator.formatTime(latestSleep.sleepHour, latestSleep.sleepMinute)} to ${SleepCalculator.formatTime(latestSleep.wakeHour, latestSleep.wakeMinute)}"
+                SleepDetailRow(
+                    label = "Time",
+                    value = "${SleepCalculator.formatTime(latestSleep.sleepHour, latestSleep.sleepMinute)} to ${SleepCalculator.formatTime(latestSleep.wakeHour, latestSleep.wakeMinute)}"
                 )
 
-                Text("Quality: ${latestSleep.quality}")
-                Text("Source: ${latestSleep.source.label}")
+                SleepDetailRow(
+                    label = "Quality",
+                    value = latestSleep.quality.toString()
+                )
+
+                SleepDetailRow(
+                    label = "Source",
+                    value = latestSleep.source.label
+                )
 
                 if (latestSleep.snoringLevel.name != "None") {
-                    Text("Snoring: ${latestSleep.snoringLevel.label}")
+                    SleepDetailRow(
+                        label = "Snoring",
+                        value = latestSleep.snoringLevel.label
+                    )
                 }
 
                 val tags = SleepTag.optionsFromStorage(latestSleep.tags)
@@ -197,10 +251,28 @@ private fun LatestSleepCard(
 
                 Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
 
-                SleepFeedbackCard(
-                    durationMinutes = latestSleep.durationMinutes,
-                    goalMinutes = goalMinutes
+                Text(
+                    text = SleepCalculator.getGoalStatusTitle(
+                        durationMinutes = latestSleep.durationMinutes,
+                        goalMinutes = goalMinutes
+                    ),
+                    style = MaterialTheme.typography.titleMedium
                 )
+
+                Text(
+                    text = SleepCalculator.getGoalDifferenceText(
+                        durationMinutes = latestSleep.durationMinutes,
+                        goalMinutes = goalMinutes
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Button(
+                    onClick = onLogSleepClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Log Sleep")
+                }
             }
         }
     }

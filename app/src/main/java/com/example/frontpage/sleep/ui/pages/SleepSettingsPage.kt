@@ -5,16 +5,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +42,11 @@ private enum class SleepSettingsDialog {
     CustomTags,
     SleepHistory,
     HealthConnect
+}
+
+private enum class ScheduleTargetPicker {
+    Bedtime,
+    Wake
 }
 
 @Composable
@@ -306,7 +318,11 @@ private fun SettingsSummaryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 116.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -641,12 +657,12 @@ private fun EditGoalDialog(
     onDismiss: () -> Unit,
     onSave: (Int) -> Unit
 ) {
-    var goalHoursText by remember(title, initialGoalMinutes) {
-        mutableStateOf((initialGoalMinutes / 60).toString())
+    var selectedGoalHours by remember(title, initialGoalMinutes) {
+        mutableStateOf((initialGoalMinutes / 60).coerceIn(4, 12))
     }
 
-    val goalHours = goalHoursText.toIntOrNull()
-    val isValid = goalHours != null && goalHours in 4..12
+    var expanded by remember { mutableStateOf(false) }
+    val selectedGoalMinutes = selectedGoalHours * 60
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -655,27 +671,70 @@ private fun EditGoalDialog(
         },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = goalHoursText,
-                    onValueChange = { goalHoursText = it },
-                    label = { Text("Goal hours") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text("Choose your target sleep duration.")
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Selected goal",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        Text(
+                            text = SleepCalculator.formatDuration(selectedGoalMinutes),
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                expanded = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("$selectedGoalHours hours")
+                        }
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = {
+                                expanded = false
+                            }
+                        ) {
+                            for (hour in 4..12) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("$hour hours")
+                                    },
+                                    onClick = {
+                                        selectedGoalHours = hour
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Text(
-                    text = "Use a whole number from 4 to 12 hours.",
+                    text = "Sleep goal must be between 4 and 12 hours.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
         },
         confirmButton = {
             TextButton(
-                enabled = isValid,
                 onClick = {
-                    onSave((goalHours ?: 8) * 60)
+                    onSave(selectedGoalMinutes)
                 }
             ) {
                 Text("Save")
@@ -689,6 +748,7 @@ private fun EditGoalDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditScheduleTargetsDialog(
     title: String,
@@ -697,17 +757,21 @@ private fun EditScheduleTargetsDialog(
     onDismiss: () -> Unit,
     onSave: (Int, Int) -> Unit
 ) {
-    var bedtimeText by remember(title, initialBedtimeMinutes) {
-        mutableStateOf(SleepCalculator.formatClockMinutes(initialBedtimeMinutes))
+    var selectedPicker by remember(title) {
+        mutableStateOf(ScheduleTargetPicker.Bedtime)
     }
 
-    var wakeText by remember(title, initialWakeMinutes) {
-        mutableStateOf(SleepCalculator.formatClockMinutes(initialWakeMinutes))
-    }
+    val bedtimeState = rememberTimePickerState(
+        initialHour = initialBedtimeMinutes / 60,
+        initialMinute = initialBedtimeMinutes % 60,
+        is24Hour = true
+    )
 
-    val bedtimeMinutes = parseClockMinutes(bedtimeText)
-    val wakeMinutes = parseClockMinutes(wakeText)
-    val isValid = bedtimeMinutes != null && wakeMinutes != null
+    val wakeState = rememberTimePickerState(
+        initialHour = initialWakeMinutes / 60,
+        initialMinute = initialWakeMinutes % 60,
+        is24Hour = true
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -716,39 +780,75 @@ private fun EditScheduleTargetsDialog(
         },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = bedtimeText,
-                    onValueChange = { bedtimeText = it },
-                    label = { Text("Bedtime target") },
-                    placeholder = { Text("23:00") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text("Choose your sleep start and wake-up target.")
 
-                OutlinedTextField(
-                    value = wakeText,
-                    onValueChange = { wakeText = it },
-                    label = { Text("Wake target") },
-                    placeholder = { Text("07:00") },
-                    singleLine = true,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (selectedPicker == ScheduleTargetPicker.Bedtime) {
+                        OutlinedButton(
+                            onClick = {
+                                selectedPicker = ScheduleTargetPicker.Bedtime
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sleep ${SleepCalculator.formatClockMinutes(bedtimeState.hour * 60 + bedtimeState.minute)}")
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                selectedPicker = ScheduleTargetPicker.Bedtime
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sleep ${SleepCalculator.formatClockMinutes(bedtimeState.hour * 60 + bedtimeState.minute)}")
+                        }
+                    }
+
+                    if (selectedPicker == ScheduleTargetPicker.Wake) {
+                        OutlinedButton(
+                            onClick = {
+                                selectedPicker = ScheduleTargetPicker.Wake
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Wake ${SleepCalculator.formatClockMinutes(wakeState.hour * 60 + wakeState.minute)}")
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                selectedPicker = ScheduleTargetPicker.Wake
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Wake ${SleepCalculator.formatClockMinutes(wakeState.hour * 60 + wakeState.minute)}")
+                        }
+                    }
+                }
+
+                TimePicker(
+                    state = if (selectedPicker == ScheduleTargetPicker.Bedtime) {
+                        bedtimeState
+                    } else {
+                        wakeState
+                    }
                 )
 
                 Text(
-                    text = "Use 24-hour time, for example 22:30 or 07:15.",
+                    text = "Tap Sleep or Wake above, then choose the time on the clock.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
         },
         confirmButton = {
             TextButton(
-                enabled = isValid,
                 onClick = {
                     onSave(
-                        bedtimeMinutes ?: (23 * 60),
-                        wakeMinutes ?: (7 * 60)
+                        bedtimeState.hour * 60 + bedtimeState.minute,
+                        wakeState.hour * 60 + wakeState.minute
                     )
                 }
             ) {
