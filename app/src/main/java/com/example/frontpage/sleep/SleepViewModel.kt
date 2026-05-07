@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SleepViewModel(
@@ -107,9 +108,16 @@ class SleepViewModel(
     }
 
     fun updateSleepGoalMinutes(newGoalMinutes: Int) {
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { true }
+        )
+
         val updatedGoalMinutes = SleepSettingsRepository.updateSleepGoalMinutes(
             context = appContext,
-            userId = getCurrentUserIdOrRefresh(),
+            userId = userId,
             newGoalMinutes = newGoalMinutes
         )
 
@@ -117,13 +125,51 @@ class SleepViewModel(
         refreshSleepSettings()
     }
 
+    fun updateTodaySleepGoalMinutes(newGoalMinutes: Int) {
+        val todayMillis = System.currentTimeMillis()
+        val todayWeekday = SleepWeekday.fromDateMillis(todayMillis)
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { dateMillis ->
+                SleepWeekday.fromDateMillis(dateMillis) == todayWeekday
+            }
+        )
+
+        _weekdaySettings.value = SleepSettingsRepository.updateWeekdayGoalMinutes(
+            context = appContext,
+            userId = userId,
+            weekday = todayWeekday,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        val updatedGoalMinutes = SleepSettingsRepository.updateSleepGoalMinutesForDate(
+            context = appContext,
+            userId = userId,
+            dateMillis = todayMillis,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        _goalMinutes.value = updatedGoalMinutes
+    }
+
     fun updateWeekdayGoalMinutes(
         weekday: SleepWeekday,
         newGoalMinutes: Int
     ) {
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { dateMillis ->
+                SleepWeekday.fromDateMillis(dateMillis) == weekday
+            }
+        )
+
         _weekdaySettings.value = SleepSettingsRepository.updateWeekdayGoalMinutes(
             context = appContext,
-            userId = getCurrentUserIdOrRefresh(),
+            userId = userId,
             weekday = weekday,
             newGoalMinutes = newGoalMinutes
         )
@@ -174,11 +220,11 @@ class SleepViewModel(
     }
 
     fun getGoalMinutesForDate(dateMillis: Long): Int {
-        val weekday = SleepWeekday.fromDateMillis(dateMillis)
-
-        return _weekdaySettings.value.firstOrNull { settings ->
-            settings.weekday == weekday
-        }?.goalMinutes ?: _goalMinutes.value
+        return SleepSettingsRepository.getSleepGoalMinutesForDate(
+            context = appContext,
+            userId = currentUserId.value,
+            dateMillis = dateMillis
+        )
     }
 
     fun refreshHealthConnectState() {
@@ -312,6 +358,39 @@ class SleepViewModel(
             context = appContext,
             userId = currentUserId.value
         )
+    }
+
+    private fun snapshotPastSleepGoalDates(
+        userId: Long?,
+        shouldSnapshot: (Long) -> Boolean
+    ) {
+        val todayStartMillis = startOfLocalDayMillis(System.currentTimeMillis())
+
+        sleepLogs.value
+            .asSequence()
+            .map { entry -> entry.dateMillis }
+            .filter { dateMillis ->
+                startOfLocalDayMillis(dateMillis) < todayStartMillis && shouldSnapshot(dateMillis)
+            }
+            .map { dateMillis -> startOfLocalDayMillis(dateMillis) }
+            .distinct()
+            .forEach { dateMillis ->
+                SleepSettingsRepository.snapshotSleepGoalMinutesForDate(
+                    context = appContext,
+                    userId = userId,
+                    dateMillis = dateMillis
+                )
+            }
+    }
+
+    private fun startOfLocalDayMillis(dateMillis: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = dateMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
     }
 
     override fun onCleared() {

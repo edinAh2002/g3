@@ -1,12 +1,16 @@
 package com.example.frontpage.sleep.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -14,6 +18,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.model.WeeklySleepChartItem
@@ -100,6 +107,38 @@ fun WeeklySleepChartRow(
             },
             modifier = Modifier.width(60.dp),
             style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+fun GradientSleepProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(50)
+    val clampedProgress = progress.coerceIn(0f, 1f)
+
+    Box(
+        modifier = modifier
+            .height(8.dp)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(clampedProgress)
+                .height(8.dp)
+                .clip(shape)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFE53935),
+                            Color(0xFFFDD835),
+                            Color(0xFF43A047)
+                        )
+                    )
+                )
         )
     }
 }

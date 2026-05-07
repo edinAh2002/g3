@@ -3,6 +3,7 @@ package com.example.frontpage.sleep.data
 import android.net.Uri
 import android.content.Context
 import androidx.core.content.edit
+import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
@@ -15,6 +16,7 @@ object SleepSettingsRepository {
 
     private const val PREFERENCES_NAME = "sleep_settings"
     private const val GOAL_KEY_PREFIX = "sleep_goal_minutes_user_"
+    private const val DATE_GOAL_KEY_PREFIX = "sleep_date_goal_minutes_user_"
     private const val WEEKDAY_GOAL_KEY_PREFIX = "sleep_weekday_goal_minutes_user_"
     private const val WEEKDAY_BEDTIME_KEY_PREFIX = "sleep_weekday_bedtime_minutes_user_"
     private const val WEEKDAY_WAKE_KEY_PREFIX = "sleep_weekday_wake_minutes_user_"
@@ -37,6 +39,21 @@ object SleepSettingsRepository {
         userId: Long?,
         dateMillis: Long
     ): Int {
+        if (userId != null) {
+            val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            val dateGoalKey = dateGoalKey(
+                userId = userId,
+                dateMillis = dateMillis
+            )
+
+            if (preferences.contains(dateGoalKey)) {
+                return preferences.getInt(
+                    dateGoalKey,
+                    DEFAULT_SLEEP_GOAL_MINUTES
+                )
+            }
+        }
+
         return getSleepGoalMinutesForWeekday(
             context = context,
             userId = userId,
@@ -91,6 +108,62 @@ object SleepSettingsRepository {
         }
 
         return goalMinutes
+    }
+
+    fun updateSleepGoalMinutesForDate(
+        context: Context,
+        userId: Long?,
+        dateMillis: Long,
+        newGoalMinutes: Int
+    ): Int {
+        val goalMinutes = newGoalMinutes.coerceIn(
+            minimumValue = 4 * 60,
+            maximumValue = 12 * 60
+        )
+
+        if (userId != null) {
+            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    putInt(
+                        dateGoalKey(
+                            userId = userId,
+                            dateMillis = dateMillis
+                        ),
+                        goalMinutes
+                    )
+                }
+        }
+
+        return goalMinutes
+    }
+
+    fun snapshotSleepGoalMinutesForDate(
+        context: Context,
+        userId: Long?,
+        dateMillis: Long
+    ) {
+        if (userId == null) return
+
+        val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val dateGoalKey = dateGoalKey(
+            userId = userId,
+            dateMillis = dateMillis
+        )
+
+        if (preferences.contains(dateGoalKey)) return
+
+        val goalMinutes = getSleepGoalMinutesForDate(
+            context = context,
+            userId = userId,
+            dateMillis = dateMillis
+        )
+
+        preferences.edit {
+            putInt(
+                dateGoalKey,
+                goalMinutes
+            )
+        }
     }
 
     fun getWeekdaySleepSettings(
@@ -283,6 +356,13 @@ object SleepSettingsRepository {
 
     private fun goalKey(userId: Long): String {
         return "$GOAL_KEY_PREFIX$userId"
+    }
+
+    private fun dateGoalKey(
+        userId: Long,
+        dateMillis: Long
+    ): String {
+        return "$DATE_GOAL_KEY_PREFIX${userId}_${SleepDateUtils.formatIsoDate(dateMillis)}"
     }
 
     private fun weekdayGoalKey(

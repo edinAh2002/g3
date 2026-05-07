@@ -280,7 +280,7 @@ fun SleepScreen(
                 showGoalDialog = false
             },
             onSave = { newGoalMinutes ->
-                viewModel.updateSleepGoalMinutes(newGoalMinutes)
+                viewModel.updateTodaySleepGoalMinutes(newGoalMinutes)
                 showGoalDialog = false
             }
         )
