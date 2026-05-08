@@ -18,7 +18,9 @@ import java.util.Calendar
 
 class SleepHealthConnectManager(
     private val context: Context
-) {
+) : SleepHealthDataSource {
+    override val requiredPermissions: Set<String> = PERMISSIONS
+
     private val healthConnectClient: HealthConnectClient?
         get() {
             return if (getAvailability() == HealthConnectAvailability.Available) {
@@ -28,7 +30,7 @@ class SleepHealthConnectManager(
             }
         }
 
-    suspend fun getState(): SleepHealthConnectState {
+    override suspend fun getState(): SleepHealthConnectState {
         val availability = getAvailability()
         val hasPermission = if (availability == HealthConnectAvailability.Available) {
             hasRequiredPermissions()
@@ -42,14 +44,14 @@ class SleepHealthConnectManager(
         )
     }
 
-    suspend fun hasRequiredPermissions(): Boolean {
+    override suspend fun hasRequiredPermissions(): Boolean {
         val client = healthConnectClient ?: return false
         val grantedPermissions = client.permissionController.getGrantedPermissions()
 
         return grantedPermissions.containsAll(PERMISSIONS)
     }
 
-    suspend fun readSleepSessionsFromLast30Days(): List<SleepEntry> {
+    override suspend fun readSleepSessionsFromLast30Days(): List<SleepEntry> {
         val client = healthConnectClient ?: return emptyList()
         if (!hasRequiredPermissions()) return emptyList()
 

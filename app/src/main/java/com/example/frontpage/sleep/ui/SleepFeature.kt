@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDateUtils
-import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.ui.cards.SleepHomeSummaryCard
 import com.example.frontpage.sleep.ui.dialogs.SleepLogDialog
 
@@ -69,43 +68,22 @@ object SleepFeature {
                 onDismiss = {
                     controller.closeLogDialog()
                 },
-                onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, wakeDateMillis, quality, durationMinutes, notes, dreamJournal, snoringLevel, tags ->
-
+                onSave = { draft ->
                     val editingEntry = controller.editingEntry
+                    val date = SleepDateUtils.formatHistoryDate(draft.wakeDateMillis)
 
                     if (editingEntry == null) {
                         viewModel.addSleep(
-                            SleepEntry(
+                            draft.toNewEntry(
                                 id = System.currentTimeMillis(),
-                                date = SleepDateUtils.formatHistoryDate(wakeDateMillis),
-                                sleepHour = sleepHour,
-                                sleepMinute = sleepMinute,
-                                wakeHour = wakeHour,
-                                wakeMinute = wakeMinute,
-                                durationMinutes = durationMinutes,
-                                quality = quality,
-                                notes = notes,
-                                dateMillis = wakeDateMillis,
-                                dreamJournal = dreamJournal,
-                                snoringLevel = snoringLevel,
-                                tags = tags
+                                date = date
                             )
                         )
                     } else {
                         viewModel.updateSleep(
-                            editingEntry.copy(
-                                date = SleepDateUtils.formatHistoryDate(wakeDateMillis),
-                                sleepHour = sleepHour,
-                                sleepMinute = sleepMinute,
-                                wakeHour = wakeHour,
-                                wakeMinute = wakeMinute,
-                                durationMinutes = durationMinutes,
-                                quality = quality,
-                                notes = notes,
-                                dateMillis = wakeDateMillis,
-                                dreamJournal = dreamJournal,
-                                snoringLevel = snoringLevel,
-                                tags = tags
+                            draft.applyTo(
+                                entry = editingEntry,
+                                date = date
                             )
                         )
                     }

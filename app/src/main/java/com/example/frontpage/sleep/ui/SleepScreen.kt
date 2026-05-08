@@ -3,15 +3,11 @@ package com.example.frontpage.sleep.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -26,30 +22,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.health.connect.client.PermissionController
 import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
-import com.example.frontpage.sleep.data.SleepHealthConnectManager
-import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.buildPrimarySleepRecommendation
-import com.example.frontpage.sleep.domain.buildSleepGoalBalance
-import com.example.frontpage.sleep.domain.buildSleepMoodInsight
-import com.example.frontpage.sleep.domain.buildSleepScoreSummary
-import com.example.frontpage.sleep.domain.buildSleepStreakSummary
-import com.example.frontpage.sleep.domain.buildSleepTagInsight
-import com.example.frontpage.sleep.domain.buildWeeklySleepChartData
+import com.example.frontpage.sleep.domain.SleepDashboardStateBuilder
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.ui.components.SleepPageNavigation
 import com.example.frontpage.sleep.ui.dialogs.SleepGoalDialog
 import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
 import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
 import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
 import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
-
-private enum class SleepPage(
-    val label: String
-) {
-    Overview("Overview"),
-    History("History"),
-    Insights("Insights"),
-    Settings("Settings")
-}
 
 @Composable
 fun SleepScreen(
@@ -68,6 +48,7 @@ fun SleepScreen(
     val customTags by viewModel.customTags.collectAsState()
     val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
+    val dashboardStateBuilder = remember { SleepDashboardStateBuilder() }
 
     val healthConnectPermissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -84,69 +65,12 @@ fun SleepScreen(
         viewModel.refreshHealthConnectState()
     }
 
-    val latestSleep = sleepLogs.lastOrNull()
-    val latestGoalMinutes = latestSleep?.let { sleepEntry ->
-        viewModel.getGoalMinutesForDate(sleepEntry.dateMillis)
-    } ?: goalMinutes
-
-    val averageSleepMinutes = if (sleepLogs.isEmpty()) {
-        0
-    } else {
-        sleepLogs.map { it.durationMinutes }.average().toInt()
-    }
-
-    val longestSleepMinutes = sleepLogs.maxOfOrNull { it.durationMinutes } ?: 0
-    val shortestSleepMinutes = sleepLogs.minOfOrNull { it.durationMinutes } ?: 0
-
-    val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
-
-    val averageBedtimeMinutes = SleepCalculator.calculateAverageBedtimeMinutes(sleepLogs)
-    val averageWakeTimeMinutes = SleepCalculator.calculateAverageWakeTimeMinutes(sleepLogs)
-
-    val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
-
-    val last7DaysSleepLogs = sleepLogs.filter {
-        it.dateMillis >= sevenDaysAgo
-    }
-
-    val sleepConsistencyVariationMinutes =
-        SleepCalculator.calculateSleepConsistencyVariationMinutes(last7DaysSleepLogs)
-
-    val sleepDurationRangeMinutes =
-        SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
-
-    val sleepScoreSummary = buildSleepScoreSummary(
-        latestSleep = latestSleep,
-        goalMinutes = latestGoalMinutes,
-        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
-        durationRangeMinutes = sleepDurationRangeMinutes
-    )
-
-    val sleepGoalBalance = buildSleepGoalBalance(
-        sleepLogs = last7DaysSleepLogs,
+    val dashboardState = dashboardStateBuilder.build(
+        sleepLogs = sleepLogs,
+        fallbackGoalMinutes = goalMinutes,
+        moodEntries = moodEntries,
         goalMinutesForDate = viewModel::getGoalMinutesForDate
     )
-
-    val streakSummary = buildSleepStreakSummary(
-        sleepLogs = sleepLogs,
-        goalMinutesForDate = viewModel::getGoalMinutesForDate
-    )
-
-    val primaryRecommendation = buildPrimarySleepRecommendation(
-        latestSleep = latestSleep,
-        goalMinutes = latestGoalMinutes,
-        sleepGoalBalance = sleepGoalBalance,
-        streakSummary = streakSummary,
-        consistencyVariationMinutes = sleepConsistencyVariationMinutes,
-        durationRangeMinutes = sleepDurationRangeMinutes
-    )
-
-    val sleepMoodInsight = buildSleepMoodInsight(
-        sleepLogs = sleepLogs,
-        moodEntries = moodEntries
-    )
-
-    val sleepTagInsight = buildSleepTagInsight(sleepLogs)
 
     Column(
         modifier = modifier
@@ -168,16 +92,16 @@ fun SleepScreen(
         when (selectedPage) {
             SleepPage.Overview -> {
                 SleepOverviewPage(
-                    latestSleep = latestSleep,
-                    goalMinutes = latestGoalMinutes,
-                    averageSleepMinutes = averageSleepMinutes,
-                    longestSleepMinutes = longestSleepMinutes,
-                    shortestSleepMinutes = shortestSleepMinutes,
+                    latestSleep = dashboardState.latestSleep,
+                    goalMinutes = dashboardState.latestGoalMinutes,
+                    averageSleepMinutes = dashboardState.averageSleepMinutes,
+                    longestSleepMinutes = dashboardState.longestSleepMinutes,
+                    shortestSleepMinutes = dashboardState.shortestSleepMinutes,
                     totalLogs = sleepLogs.size,
-                    weeklyChartData = weeklyChartData,
-                    sleepScoreSummary = sleepScoreSummary,
-                    sleepGoalBalance = sleepGoalBalance,
-                    streakSummary = streakSummary,
+                    weeklyChartData = dashboardState.weeklyChartData,
+                    sleepScoreSummary = dashboardState.sleepScoreSummary,
+                    sleepGoalBalance = dashboardState.sleepGoalBalance,
+                    streakSummary = dashboardState.streakSummary,
                     onLogSleepClick = onLogSleepClick,
                     onEditGoalClick = {
                         showGoalDialog = true
@@ -201,20 +125,20 @@ fun SleepScreen(
             SleepPage.Insights -> {
                 SleepInsightsPage(
                     sleepLogs = sleepLogs,
-                    averageSleepMinutes = averageSleepMinutes,
-                    longestSleepMinutes = longestSleepMinutes,
-                    shortestSleepMinutes = shortestSleepMinutes,
-                    averageBedtimeMinutes = averageBedtimeMinutes,
-                    averageWakeTimeMinutes = averageWakeTimeMinutes,
-                    sleepConsistencyVariationMinutes = sleepConsistencyVariationMinutes,
-                    sleepDurationRangeMinutes = sleepDurationRangeMinutes,
-                    consistencyLogCount = last7DaysSleepLogs.size,
-                    sleepScoreSummary = sleepScoreSummary,
-                    sleepGoalBalance = sleepGoalBalance,
-                    streakSummary = streakSummary,
-                    primaryRecommendation = primaryRecommendation,
-                    sleepMoodInsight = sleepMoodInsight,
-                    sleepTagInsight = sleepTagInsight
+                    averageSleepMinutes = dashboardState.averageSleepMinutes,
+                    longestSleepMinutes = dashboardState.longestSleepMinutes,
+                    shortestSleepMinutes = dashboardState.shortestSleepMinutes,
+                    averageBedtimeMinutes = dashboardState.averageBedtimeMinutes,
+                    averageWakeTimeMinutes = dashboardState.averageWakeTimeMinutes,
+                    sleepConsistencyVariationMinutes = dashboardState.sleepConsistencyVariationMinutes,
+                    sleepDurationRangeMinutes = dashboardState.sleepDurationRangeMinutes,
+                    consistencyLogCount = dashboardState.last7DaysSleepLogs.size,
+                    sleepScoreSummary = dashboardState.sleepScoreSummary,
+                    sleepGoalBalance = dashboardState.sleepGoalBalance,
+                    streakSummary = dashboardState.streakSummary,
+                    primaryRecommendation = dashboardState.primaryRecommendation,
+                    sleepMoodInsight = dashboardState.sleepMoodInsight,
+                    sleepTagInsight = dashboardState.sleepTagInsight
                 )
             }
 
@@ -260,7 +184,7 @@ fun SleepScreen(
                         viewModel.onHealthConnectPermissionRequestStarted()
 
                         try {
-                            healthConnectPermissionLauncher.launch(SleepHealthConnectManager.PERMISSIONS)
+                            healthConnectPermissionLauncher.launch(viewModel.sleepHealthPermissions)
                         } catch (_: Exception) {
                             viewModel.onHealthConnectPermissionRequestFailed()
                         }
@@ -284,79 +208,5 @@ fun SleepScreen(
                 showGoalDialog = false
             }
         )
-    }
-}
-
-@Composable
-private fun SleepPageNavigation(
-    selectedPage: SleepPage,
-    onPageSelected: (SleepPage) -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepPageButton(
-                page = SleepPage.Overview,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepPageButton(
-                page = SleepPage.History,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepPageButton(
-                page = SleepPage.Insights,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepPageButton(
-                page = SleepPage.Settings,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SleepPageButton(
-    page: SleepPage,
-    selectedPage: SleepPage,
-    onPageSelected: (SleepPage) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isSelected = page == selectedPage
-
-    if (isSelected) {
-        Button(
-            onClick = { onPageSelected(page) },
-            modifier = modifier
-        ) {
-            Text(page.label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = { onPageSelected(page) },
-            modifier = modifier
-        ) {
-            Text(page.label)
-        }
     }
 }

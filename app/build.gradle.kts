@@ -19,7 +19,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -49,7 +49,7 @@ android {
     applicationVariants.all {
         outputs.all {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            outputImpl.outputFileName = "FIT-TASTIC-${buildType.name}-v1${versionName}.apk"
+            outputImpl.outputFileName = "FIT-TASTIC-${buildType.name}-v${versionName}.apk"
         }
     }
 

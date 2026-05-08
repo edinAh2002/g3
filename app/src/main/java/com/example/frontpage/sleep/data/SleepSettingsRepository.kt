@@ -5,14 +5,15 @@ import android.content.Context
 import androidx.core.content.edit
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepCustomTag
+import com.example.frontpage.sleep.model.SleepDefaults
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
 object SleepSettingsRepository {
 
-    const val DEFAULT_SLEEP_GOAL_MINUTES: Int = 8 * 60
-    const val DEFAULT_BEDTIME_MINUTES: Int = 23 * 60
-    const val DEFAULT_WAKE_MINUTES: Int = 7 * 60
+    const val DEFAULT_SLEEP_GOAL_MINUTES: Int = SleepDefaults.SLEEP_GOAL_MINUTES
+    const val DEFAULT_BEDTIME_MINUTES: Int = SleepDefaults.BEDTIME_MINUTES
+    const val DEFAULT_WAKE_MINUTES: Int = SleepDefaults.WAKE_MINUTES
 
     private const val PREFERENCES_NAME = "sleep_settings"
     private const val GOAL_KEY_PREFIX = "sleep_goal_minutes_user_"
