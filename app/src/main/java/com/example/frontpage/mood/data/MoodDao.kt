@@ -28,6 +28,26 @@ interface MoodDao {
 
     @Query(
         """
+        DELETE FROM mood_entries
+        WHERE userId = :userId
+        AND id IN (:ids)
+        """
+    )
+    suspend fun deleteMoodsForUser(
+        ids: List<Int>,
+        userId: Long
+    )
+
+    @Query(
+        """
+        DELETE FROM mood_entries
+        WHERE userId = :userId
+        """
+    )
+    suspend fun deleteAllMoodEntriesForUser(userId: Long)
+
+    @Query(
+        """
         SELECT * FROM mood_entries
         WHERE userId = :userId
         ORDER BY id DESC

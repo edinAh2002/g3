@@ -262,7 +262,7 @@ fun FitnessApp(
                         sleepController.openLogDialog()
                     },
                     onLogMoodClick = {
-                        moodController.openTrackingDialog()
+                        moodController.openLogDialog()
                     }
                 )
             }

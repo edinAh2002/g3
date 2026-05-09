@@ -113,3 +113,65 @@ For logging sleep, start with `SleepLogDialog`. Its helper files split the dialo
 
 For reusable UI, use the components under `ui/components`: metric cards, insight cards, the progress calendar, page navigation, settings rows, history sections, trends, consistency, and the weekly chart. For the home screen summary, use `SleepHomeSummaryCard` through `SleepFeature.HomeSummaryCard`.
 
+# Mood Package Documentation
+
+This folder owns the mood feature: manual mood logging, mood scale presets, mood history, mood analytics, and the Compose UI. The notes below explain each class in plain language and how it is meant to be used.
+
+### Feature Entry Points
+
+| Class | What it does | How to use it |
+| --- | --- | --- |
+| `MoodViewModel` | Holds mood screen state and coordinates mood logs, filters, current user data, bulk deletes, and default scale settings. | Use it from Compose screens when you need mood entries, filtered history, default scale presets, or actions such as add, update, delete, and clear. |
+| `MoodFeature` | Public facade for connecting the mood feature to the rest of the app. | Use `MainRoute`, `HomeSummaryCard`, and `DialogHost` instead of wiring the mood screen manually from other features. |
+| `MoodFeatureController` | Small UI controller for opening and closing the mood log dialog. | Create it with `MoodFeature.rememberController()` and pass it to `MoodFeature.MainRoute` and `MoodFeature.DialogHost`. |
+| `MoodPage` | Internal enum for the mood tabs: overview, history, insights, and settings. | Use it inside the mood UI when adding or changing page navigation. |
+
+### Data Layer
+
+| Class | What it does | How to use it |
+| --- | --- | --- |
+| `MoodDao` | Room DAO for reading, writing, updating, and deleting `MoodEntry` rows. | Keep it behind `MoodRepository`; UI and ViewModels should not call it directly. |
+| `MoodRepository` | Room-backed mood log storage wrapper. | Create it with `MoodDao`; it safely scopes reads, writes, deletes, and bulk deletes to the current user id passed in. |
+
+### Domain Layer
+
+| Class | What it does | How to use it |
+| --- | --- | --- |
+| `MoodDateUtils` | Utility object for mood date formatting, parsing, current date/time, and date ranges. | Use it when logging a mood date, building calendar state, or formatting dates for history. |
+| `MoodLabelUtils` | Utility object for turning numeric mood values into labels, descriptions, averages, and change text. | Use it whenever a mood score needs to be displayed with the active scale preset. |
+| `MoodStatsCalculator` | Utility object for mood averages, best and lowest moods, daily averages, counts, and common mood values. | Use it anywhere mood math or simple mood summaries are needed. |
+| `MoodDashboardState` | Complete calculated state for the main mood dashboard. | Build it once and pass it into UI pages instead of recalculating values in Compose. |
+| `MoodDashboardStateBuilder` | Converts raw mood logs and the active scale preset into `MoodDashboardState`. | Use it before rendering dashboard pages or tests that need the same calculated mood summary. |
+| `MoodScoreSummary` | Small model for the mood score card. | Use it to show a score with a title and explanation. |
+| `MoodMomentumSummary` | Small model for whether recent mood is up, down, stable, or needs more logs. | Use it in insight cards that compare the last 7 days with the previous 7 days. |
+| `MoodStreakSummary` | Small model for logged-day and positive-mood streaks. | Use it when showing mood streaks or recommendations. |
+| `MoodPatternInsight` | Small model for simple insights based on repeated mood values. | Use it when showing the most common saved mood. |
+| `MoodNoteInsight` | Small model for note coverage across mood logs. | Use it when showing how often the user adds context to mood logs. |
+
+### Models
+
+| Class | What it does | How to use it |
+| --- | --- | --- |
+| `MoodEntry` | Room entity for one mood log. | Use it whenever a saved mood record is needed. |
+| `MoodLogDraft` | Temporary save payload from the mood log dialog. | Use `toNewEntry()` for new logs or `applyTo()` when editing an existing log. |
+| `MoodFeelingFilter` | Enum for mood history filters such as all moods, sad, calm, content, or joyful. | Use it to filter history without changing the selected calendar date. |
+| `MoodLogFilterState` | UI state model for the active mood history filter. | Read it from `MoodViewModel.filterState` when rendering the history filter button. |
+| `MoodScalePreset` | Enum for the available 1-to-5 mood label presets, including feelings, classic, and emoji styles. | Use it when rendering mood options, saving the default scale, or displaying mood labels. |
+| `MoodScaleOption` | Display model for one value inside a mood scale preset. | Use it when building option buttons in the mood log dialog or previewing a scale in settings. |
+| `WeeklyMoodChartItem` | One bar/item in the weekly mood chart. | Build it with analytics helpers and pass it into chart components. |
+
+### UI State Helpers
+
+| Class | What it does | How to use it |
+| --- | --- | --- |
+| `MoodCalendarMonthState` | Internal model for the visible month in the mood calendar. | Use it inside calendar components to move between months and build month labels. |
+| `CalendarDayMood` | Internal model for one day in the calendar, including average mood, entry count, and progress. | Use it to render a calendar day cell with the correct mood progress color. |
+| `MoodSettingsDialog` | Private enum for which settings dialog is open. | Keep it inside `MoodSettingsPage`; it controls local dialog state only. |
+
+### Main Compose Pieces
+
+Most UI files in this package are composable functions, not classes. The main entry is `MoodScreen`, which collects ViewModel state, builds `MoodDashboardState`, and shows the mood pages. The page composables are `MoodOverviewPage`, `MoodHistoryPage`, `MoodInsightsPage`, and `MoodSettingsPage`.
+
+For logging mood, start with `MoodLogDialog`. It lets the user choose a date, choose the scale preset for the current log, select the mood value, and add an optional note. `MoodOptionButton` renders each preset option, while `MoodScalePresetDialog`, `MoodScaleDialog`, and the history delete dialogs handle focused popup flows.
+
+For reusable UI, use the components under `ui/components`: metric cards, insight cards, the progress calendar, page navigation, settings rows, history cards, section headers, and the weekly chart. For the home screen summary, use `MoodHomeSummaryCard` through `MoodFeature.HomeSummaryCard`.

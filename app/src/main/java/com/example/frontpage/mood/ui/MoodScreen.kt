@@ -2,48 +2,55 @@ package com.example.frontpage.mood.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.mood.MoodViewModel
-import com.example.frontpage.mood.model.MoodSection
+import com.example.frontpage.mood.domain.MoodDashboardStateBuilder
+import com.example.frontpage.mood.model.MoodEntry
+import com.example.frontpage.mood.ui.components.MoodPageNavigation
 import com.example.frontpage.mood.ui.pages.MoodHistoryPage
 import com.example.frontpage.mood.ui.pages.MoodInsightsPage
 import com.example.frontpage.mood.ui.pages.MoodOverviewPage
 import com.example.frontpage.mood.ui.pages.MoodSettingsPage
 
 @Composable
-fun MoodMainRoute(
+fun MoodScreen(
     modifier: Modifier = Modifier,
-    onLogNewMood: () -> Unit,
+    onLogMoodClick: () -> Unit,
+    onEditMoodEntry: (MoodEntry) -> Unit,
     viewModel: MoodViewModel = viewModel()
 ) {
-    val activeSection by viewModel.activeSection.collectAsState()
+    var selectedPage by remember { mutableStateOf(MoodPage.Overview) }
+
     val allMoodEntries by viewModel.allMoodEntries.collectAsState()
     val filteredMoodEntries by viewModel.filteredMoodEntries.collectAsState()
-    val latestMood by viewModel.latestMood.collectAsState()
-    val averageMood by viewModel.averageMood.collectAsState()
     val filteredAverageMood by viewModel.filteredAverageMood.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
+    val defaultScalePreset by viewModel.defaultScalePreset.collectAsState()
+    val dashboardStateBuilder = remember { MoodDashboardStateBuilder() }
 
-    LaunchedEffect(Unit) {
-        viewModel.showSection(MoodSection.Overview)
-        viewModel.loadMoods()
+    LaunchedEffect(viewModel) {
+        viewModel.refreshCurrentUser()
     }
+
+    val dashboardState = dashboardStateBuilder.build(
+        moodEntries = allMoodEntries,
+        scalePreset = defaultScalePreset
+    )
 
     Column(
         modifier = modifier
@@ -58,142 +65,85 @@ fun MoodMainRoute(
         )
 
         MoodPageNavigation(
-            selectedPage = activeSection,
-            onPageSelected = { section ->
-                viewModel.showSection(section)
-            }
+            selectedPage = selectedPage,
+            onPageSelected = { page -> selectedPage = page }
         )
 
-        when (activeSection) {
-            MoodSection.Overview -> {
+        when (selectedPage) {
+            MoodPage.Overview -> {
                 MoodOverviewPage(
-                    allMoodEntries = allMoodEntries,
-                    latestMood = latestMood,
-                    averageMood = averageMood,
-                    onLogMoodClick = onLogNewMood,
-                    onViewHistoryClick = {
-                        viewModel.showSection(MoodSection.History)
-                    },
-                    onViewInsightsClick = {
-                        viewModel.showSection(MoodSection.Insights)
+                    latestMood = dashboardState.latestMood,
+                    averageMood = dashboardState.averageMood,
+                    todayAverageMood = dashboardState.todayAverageMood,
+                    bestMood = dashboardState.bestMood,
+                    lowestMood = dashboardState.lowestMood,
+                    totalLogs = dashboardState.totalLogs,
+                    weeklyChartData = dashboardState.weeklyChartData,
+                    moodScoreSummary = dashboardState.moodScoreSummary,
+                    moodMomentumSummary = dashboardState.moodMomentumSummary,
+                    streakSummary = dashboardState.streakSummary,
+                    scalePreset = defaultScalePreset,
+                    onLogMoodClick = onLogMoodClick,
+                    onViewScaleClick = {
+                        selectedPage = MoodPage.Settings
                     }
                 )
             }
 
-            MoodSection.History -> {
+            MoodPage.History -> {
                 MoodHistoryPage(
                     moodEntries = allMoodEntries,
                     filteredMoodEntries = filteredMoodEntries,
                     filteredAverageMood = filteredAverageMood,
                     filterState = filterState,
+                    scalePreset = defaultScalePreset,
                     onFeelingFilterSelected = { filter ->
                         viewModel.setFeelingFilter(filter)
-                    },
-                    onDateFilterSelected = { filter ->
-                        viewModel.setDateFilter(filter)
                     },
                     onClearFilters = {
                         viewModel.clearFilters()
                     },
-                    onLogMoodClick = onLogNewMood,
-                    onEditEntry = { entry, newMoodValue, newNote ->
-                        viewModel.updateExistingMood(
-                            moodEntry = entry,
-                            newMoodValue = newMoodValue,
-                            newNote = newNote
-                        )
+                    onEditEntry = { entry ->
+                        onEditMoodEntry(entry)
                     },
                     onDeleteEntry = { entry ->
                         viewModel.deleteMood(entry)
+                    },
+                    onDeleteEntries = { entries ->
+                        viewModel.deleteMoods(entries)
                     }
                 )
             }
 
-            MoodSection.Insights -> {
+            MoodPage.Insights -> {
                 MoodInsightsPage(
                     moodEntries = allMoodEntries,
-                    latestMood = latestMood,
-                    averageMood = averageMood
+                    averageMood = dashboardState.averageMood,
+                    todayAverageMood = dashboardState.todayAverageMood,
+                    bestMood = dashboardState.bestMood,
+                    lowestMood = dashboardState.lowestMood,
+                    moodScoreSummary = dashboardState.moodScoreSummary,
+                    moodMomentumSummary = dashboardState.moodMomentumSummary,
+                    streakSummary = dashboardState.streakSummary,
+                    primaryRecommendation = dashboardState.primaryRecommendation,
+                    moodPatternInsight = dashboardState.moodPatternInsight,
+                    moodNoteInsight = dashboardState.moodNoteInsight,
+                    scalePreset = defaultScalePreset
                 )
             }
 
-            MoodSection.Settings -> {
-                MoodSettingsPage()
+            MoodPage.Settings -> {
+                MoodSettingsPage(
+                    totalLogs = dashboardState.totalLogs,
+                    defaultScalePreset = defaultScalePreset,
+                    onDefaultScalePresetSelected = { preset ->
+                        viewModel.updateDefaultScalePreset(preset)
+                    },
+                    onClearMoodHistoryClick = {
+                        viewModel.clearAllLogs()
+                    }
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun MoodPageNavigation(
-    selectedPage: MoodSection,
-    onPageSelected: (MoodSection) -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            MoodPageButton(
-                page = MoodSection.Overview,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-
-            MoodPageButton(
-                page = MoodSection.History,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            MoodPageButton(
-                page = MoodSection.Insights,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-
-            MoodPageButton(
-                page = MoodSection.Settings,
-                selectedPage = selectedPage,
-                onPageSelected = onPageSelected,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun MoodPageButton(
-    page: MoodSection,
-    selectedPage: MoodSection,
-    onPageSelected: (MoodSection) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isSelected = page == selectedPage
-
-    if (isSelected) {
-        Button(
-            onClick = { onPageSelected(page) },
-            modifier = modifier
-        ) {
-            Text(page.label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = { onPageSelected(page) },
-            modifier = modifier
-        ) {
-            Text(page.label)
         }
     }
 }

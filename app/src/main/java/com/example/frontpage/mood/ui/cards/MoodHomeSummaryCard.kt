@@ -1,5 +1,6 @@
-package com.example.frontpage.mood.ui
+package com.example.frontpage.mood.ui.cards
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
@@ -21,21 +22,37 @@ fun MoodHomeSummaryCard(
     viewModel: MoodViewModel = viewModel()
 ) {
     val latestMood by viewModel.latestMood.collectAsState()
+    val averageMood by viewModel.averageMood.collectAsState()
+    val defaultScalePreset by viewModel.defaultScalePreset.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.loadMoods()
+        viewModel.refreshCurrentUser()
     }
 
     val latestMoodText = latestMood?.let { moodEntry ->
-        MoodLabelUtils.getMoodLabel(moodEntry.moodValue)
+        MoodLabelUtils.getMoodLabel(
+            moodValue = moodEntry.moodValue,
+            preset = defaultScalePreset
+        )
     } ?: "Not logged"
 
+    val detailText = averageMood?.let { average ->
+        "Average ${MoodLabelUtils.formatMoodAverage(average)}"
+    } ?: "Track how you feel"
+
     Card(modifier = modifier) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Text("Mood")
             Text(
                 text = latestMoodText,
                 style = MaterialTheme.typography.headlineSmall
+            )
+            Text(
+                text = detailText,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

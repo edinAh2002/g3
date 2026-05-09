@@ -1,8 +1,11 @@
-package com.example.frontpage.mood.model
+package com.example.frontpage.mood.ui
 
-enum class MoodSection(val label: String) {
+internal enum class MoodPage(
+    val label: String
+) {
     Overview("Overview"),
     History("History"),
     Insights("Insights"),
     Settings("Settings")
 }
+

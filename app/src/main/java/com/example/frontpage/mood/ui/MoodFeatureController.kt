@@ -4,18 +4,30 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.frontpage.mood.model.MoodEntry
 
 @Stable
 class MoodFeatureController internal constructor() {
 
-    var showTrackingDialog by mutableStateOf(false)
+    var showLogDialog by mutableStateOf(false)
         private set
 
-    fun openTrackingDialog() {
-        showTrackingDialog = true
+    var editingEntry by mutableStateOf<MoodEntry?>(null)
+        private set
+
+    fun openLogDialog() {
+        editingEntry = null
+        showLogDialog = true
     }
 
-    fun closeTrackingDialog() {
-        showTrackingDialog = false
+    fun openEditDialog(entry: MoodEntry) {
+        editingEntry = entry
+        showLogDialog = true
+    }
+
+    fun closeLogDialog() {
+        showLogDialog = false
+        editingEntry = null
     }
 }
+

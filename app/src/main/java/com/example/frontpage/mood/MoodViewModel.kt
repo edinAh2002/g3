@@ -1,19 +1,17 @@
 package com.example.frontpage.mood
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.data.MoodRepository
-import com.example.frontpage.mood.domain.MoodDateUtils
 import com.example.frontpage.mood.domain.MoodStatsCalculator
-import com.example.frontpage.mood.model.MoodDateFilter
 import com.example.frontpage.mood.model.MoodEntry
 import com.example.frontpage.mood.model.MoodFeelingFilter
 import com.example.frontpage.mood.model.MoodLogFilterState
-import com.example.frontpage.mood.model.MoodSection
-import com.example.frontpage.mood.model.MoodTrackingUiState
+import com.example.frontpage.mood.model.MoodScalePreset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +22,10 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MoodRepository
     private val authRepository: AuthRepository
+    private val settingsPreferences = application.getSharedPreferences(
+        MOOD_SETTINGS_PREFERENCES,
+        Context.MODE_PRIVATE
+    )
 
     private val currentUserId = MutableStateFlow<Long?>(null)
 
@@ -42,14 +44,15 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
     private val _filteredAverageMood = MutableStateFlow<Double?>(null)
     val filteredAverageMood: StateFlow<Double?> = _filteredAverageMood.asStateFlow()
 
-    private val _activeSection = MutableStateFlow(MoodSection.Overview)
-    val activeSection: StateFlow<MoodSection> = _activeSection.asStateFlow()
-
     private val _filterState = MutableStateFlow(MoodLogFilterState())
     val filterState: StateFlow<MoodLogFilterState> = _filterState.asStateFlow()
 
-    private val _trackingState = MutableStateFlow(MoodTrackingUiState())
-    val trackingState: StateFlow<MoodTrackingUiState> = _trackingState.asStateFlow()
+    private val _defaultScalePreset = MutableStateFlow(
+        MoodScalePreset.fromStorageKey(
+            settingsPreferences.getString(KEY_DEFAULT_SCALE_PRESET, null)
+        )
+    )
+    val defaultScalePreset: StateFlow<MoodScalePreset> = _defaultScalePreset.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -83,20 +86,9 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun showSection(section: MoodSection) {
-        _activeSection.value = section
-    }
-
     fun setFeelingFilter(filter: MoodFeelingFilter) {
         _filterState.update { current ->
             current.copy(feelingFilter = filter)
-        }
-        applyFilters()
-    }
-
-    fun setDateFilter(filter: MoodDateFilter) {
-        _filterState.update { current ->
-            current.copy(dateFilter = filter)
         }
         applyFilters()
     }
@@ -106,90 +98,37 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         applyFilters()
     }
 
-    fun selectMood(moodValue: Int) {
-        _trackingState.update {
-            it.copy(
-                selectedMood = moodValue,
-                errorMessage = null
-            )
-        }
+    fun updateDefaultScalePreset(preset: MoodScalePreset) {
+        settingsPreferences.edit()
+            .putString(KEY_DEFAULT_SCALE_PRESET, preset.storageKey)
+            .apply()
+
+        _defaultScalePreset.value = preset
     }
 
-    fun updateNote(note: String) {
-        _trackingState.update {
-            it.copy(note = note)
-        }
-    }
-
-    fun saveMood(onSuccess: () -> Unit) {
-        val currentState = _trackingState.value
-
-        if (currentState.selectedMood == 0) {
-            _trackingState.update {
-                it.copy(errorMessage = "Please select a mood before saving.")
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            val userId = getCurrentUserIdOrRefresh()
-
-            if (userId == null) {
-                _trackingState.update {
-                    it.copy(
-                        isSaving = false,
-                        errorMessage = "Please log in before saving your mood."
-                    )
-                }
-                return@launch
-            }
-
-            _trackingState.update {
-                it.copy(isSaving = true, errorMessage = null)
-            }
-
-            val moodEntry = MoodEntry(
-                userId = userId,
-                date = MoodDateUtils.getTodayDate(),
-                time = MoodDateUtils.getCurrentTime(),
-                moodValue = currentState.selectedMood,
-                note = currentState.note.trim()
-            )
-
-            repository.addMood(
-                userId = userId,
-                moodEntry = moodEntry
-            )
-
-            refreshMoodData()
-
-            _trackingState.value = MoodTrackingUiState()
-
-            onSuccess()
-        }
-    }
-
-    fun resetTrackingForm() {
-        _trackingState.value = MoodTrackingUiState()
-    }
-
-    fun updateExistingMood(
-        moodEntry: MoodEntry,
-        newMoodValue: Int,
-        newNote: String
-    ) {
+    fun addMood(moodEntry: MoodEntry) {
         viewModelScope.launch {
             val userId = getCurrentUserIdOrRefresh() ?: return@launch
 
-            val updatedMood = moodEntry.copy(
+            repository.addMood(
                 userId = userId,
-                moodValue = newMoodValue,
-                note = newNote.trim()
+                moodEntry = moodEntry.copy(note = moodEntry.note.trim())
             )
+
+            refreshMoodData()
+        }
+    }
+
+    fun updateMood(moodEntry: MoodEntry) {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
 
             repository.updateMood(
                 userId = userId,
-                moodEntry = updatedMood
+                moodEntry = moodEntry.copy(
+                    userId = userId,
+                    note = moodEntry.note.trim()
+                )
             )
 
             refreshMoodData()
@@ -205,6 +144,29 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
                 moodEntry = moodEntry
             )
 
+            refreshMoodData()
+        }
+    }
+
+    fun deleteMoods(moodEntries: List<MoodEntry>) {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+            val moodIds = moodEntries.map { moodEntry -> moodEntry.id }
+
+            repository.deleteMoods(
+                userId = userId,
+                moodIds = moodIds
+            )
+
+            refreshMoodData()
+        }
+    }
+
+    fun clearAllLogs() {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            repository.clearAllMoods(userId)
             refreshMoodData()
         }
     }
@@ -235,8 +197,7 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         val currentFilters = _filterState.value
 
         val filteredEntries = currentEntries.filter { moodEntry ->
-            matchesFeelingFilter(moodEntry, currentFilters.feelingFilter) &&
-                    matchesDateFilter(moodEntry, currentFilters.dateFilter)
+            matchesFeelingFilter(moodEntry, currentFilters.feelingFilter)
         }
 
         _filteredMoodEntries.value = filteredEntries
@@ -250,21 +211,8 @@ class MoodViewModel(application: Application) : AndroidViewModel(application) {
         return filter.moodValue == null || moodEntry.moodValue == filter.moodValue
     }
 
-    private fun matchesDateFilter(
-        moodEntry: MoodEntry,
-        filter: MoodDateFilter
-    ): Boolean {
-        return when (filter) {
-            MoodDateFilter.All -> true
-
-            MoodDateFilter.Today -> {
-                moodEntry.date == MoodDateUtils.getTodayDate()
-            }
-
-            MoodDateFilter.ThisWeek -> {
-                val weekRange = MoodDateUtils.getCurrentWeekDateRange()
-                moodEntry.date >= weekRange.first && moodEntry.date <= weekRange.second
-            }
-        }
+    private companion object {
+        const val MOOD_SETTINGS_PREFERENCES = "mood_settings"
+        const val KEY_DEFAULT_SCALE_PRESET = "default_scale_preset"
     }
 }
