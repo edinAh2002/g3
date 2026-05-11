@@ -21,7 +21,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -252,11 +251,9 @@ fun FitnessApp(
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
                     sleepDisplay = sleepDisplay,
-
                     currentUsername = authUiState.currentUsername,
                     currentUserId = authUiState.currentUserId,
                     isGuest = authUiState.isGuest,
-
                     onLogOutClick = {
                         authViewModel.logOut()
                         selectedScreen = AppScreen.AuthStart
@@ -265,7 +262,6 @@ fun FitnessApp(
                         authViewModel.logOut()
                         selectedScreen = AppScreen.AuthStart
                     },
-
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
                     onLogSleepClick = { showSleepLogDialog = true },
@@ -339,7 +335,6 @@ fun FitnessApp(
                         showSleepLogDialog = false
                     },
                     onSave = { sleepHour, sleepMinute, wakeHour, wakeMinute, quality, durationMinutes, notes ->
-
                         val now = System.currentTimeMillis()
 
                         sleepViewModel.addSleep(
@@ -371,23 +366,17 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
     sleepDisplay: String?,
-
     currentUsername: String?,
     currentUserId: Long?,
     isGuest: Boolean,
     onLogOutClick: () -> Unit,
     onSwitchAccountClick: () -> Unit,
-
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
     onLogSleepClick: () -> Unit,
     onLogMoodClick: () -> Unit
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
-
-    var calories by remember {
-        mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
-    }
 
     var workout by remember {
         mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
@@ -410,7 +399,6 @@ fun HomeScreen(
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
     val calorieDisplay = "$totalCalories / $calorieGoal"
-
     val sleepCardDisplay = sleepDisplay ?: sleep
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
@@ -554,7 +542,6 @@ fun HomeScreen(
                     text = "Account Settings",
                     style = MaterialTheme.typography.headlineLarge,
                     fontSize = 24.sp
-
                 )
             },
             text = {
@@ -591,7 +578,7 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .height(48.dp)
                     ) {
-                        Text("Log out", fontSize = 20.sp )
+                        Text("Log out", fontSize = 20.sp)
                     }
 
                     Button(
