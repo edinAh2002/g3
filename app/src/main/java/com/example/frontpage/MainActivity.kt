@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -21,11 +24,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,8 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.auth.AuthEvent
 import com.example.frontpage.auth.AuthViewModel
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.auth.ui.AuthStartScreen
@@ -43,12 +49,11 @@ import com.example.frontpage.auth.ui.LoginScreen
 import com.example.frontpage.auth.ui.SignUpScreen
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.ui.MoodFeature
+import com.example.frontpage.sleep.ui.SleepFeature
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
-import androidx.compose.runtime.LaunchedEffect
-import com.example.frontpage.auth.AuthEvent
-import com.example.frontpage.sleep.ui.SleepFeature
+import java.time.LocalDate
 
 private enum class AppScreen {
     AuthStart,
@@ -93,6 +98,10 @@ fun FitnessApp(
 
     val authUiState by authViewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        authViewModel.loadCurrentUser()
+    }
+
     var selectedScreen by remember {
         mutableStateOf(
             if (authViewModel.hasSavedUser()) {
@@ -107,6 +116,7 @@ fun FitnessApp(
         authViewModel.authEvents.collect { event ->
             when (event) {
                 AuthEvent.Authenticated -> {
+                    authViewModel.loadCurrentUser()
                     selectedScreen = AppScreen.Home
                 }
             }
@@ -122,9 +132,9 @@ fun FitnessApp(
 
     var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
+
     val moodController = MoodFeature.rememberController()
     val sleepController = SleepFeature.rememberController()
-
 
     Scaffold(
         bottomBar = {
@@ -239,6 +249,21 @@ fun FitnessApp(
                     context = context,
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
+
+                    currentUsername = authUiState.currentUsername,
+                    currentUserId = authUiState.currentUserId,
+                    isGuest = authUiState.isGuest,
+
+                    onLogOutClick = {
+                        authViewModel.logOut()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+                    onSwitchAccountClick = {
+                        authViewModel.logOut()
+                        authViewModel.resetForm()
+                        selectedScreen = AppScreen.AuthStart
+                    },
+
                     onLogMealClick = { showFoodLogging = true },
                     onWorkoutClick = { selectedScreen = AppScreen.Workout },
                     onLogSleepClick = {
@@ -319,6 +344,13 @@ fun HomeScreen(
     context: Context,
     modifier: Modifier = Modifier,
     foodItems: List<FoodItem>,
+
+    currentUsername: String?,
+    currentUserId: Long?,
+    isGuest: Boolean,
+    onLogOutClick: () -> Unit,
+    onSwitchAccountClick: () -> Unit,
+
     onLogMealClick: () -> Unit,
     onWorkoutClick: () -> Unit,
     onLogSleepClick: () -> Unit,
@@ -326,16 +358,35 @@ fun HomeScreen(
 ) {
     val sharedPreferences = context.getSharedPreferences("user_stats", Context.MODE_PRIVATE)
 
-    var calories by remember {
-        mutableStateOf(sharedPreferences.getString("calories", "1,850") ?: "1,850")
-    }
-
     var workout by remember {
         mutableStateOf(sharedPreferences.getString("workout", "45 min") ?: "45 min")
     }
 
     var hydration by remember {
         mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
+    }
+
+    var streak by remember {
+        mutableStateOf(sharedPreferences.getInt("current_streak", 0))
+    }
+
+    LaunchedEffect(Unit) {
+        val today = LocalDate.now().toString()
+        val lastOpenDate = sharedPreferences.getString("last_open_date", null)
+
+        val newStreak = when {
+            lastOpenDate == today -> streak
+            lastOpenDate == null -> 1
+            LocalDate.parse(lastOpenDate).plusDays(1).toString() == today -> streak + 1
+            else -> 1
+        }
+
+        streak = newStreak
+
+        sharedPreferences.edit()
+            .putInt("current_streak", newStreak)
+            .putString("last_open_date", today)
+            .apply()
     }
 
     var showSettings by remember { mutableStateOf(false) }
@@ -370,15 +421,37 @@ fun HomeScreen(
                 Text("Let's crush your goals today!")
             }
 
-            Button(
-                onClick = { showReminderList = true }
-            ) {
-                Text("🔔")
-            }
-        }
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                IconButton(
+                    onClick = { showReminderList = true },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(15.dp)
+                        )
+                ) {
+                    Text(
+                        text = "🔔",
+                        fontSize = 24.sp
+                    )
+                }
 
-        IconButton(onClick = { showSettings = true }) {
-            Text("⚙️")
+                IconButton(
+                    onClick = { showSettings = true },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(15.dp)
+                        )
+                ) {
+                    Text(
+                        text = "⚙️",
+                        fontSize = 24.sp
+                    )
+                }
+            }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -422,7 +495,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Current Streak")
-                Text("14 days!", style = MaterialTheme.typography.headlineMedium)
+                Text("$streak days!", style = MaterialTheme.typography.headlineMedium)
                 Text("Keep it up!")
             }
         }
@@ -482,46 +555,63 @@ fun HomeScreen(
     if (showSettings) {
         AlertDialog(
             onDismissRequest = { showSettings = false },
-            title = { Text("Edit Stats") },
+            title = {
+                Text(
+                    text = "Account Settings",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontSize = 24.sp
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    OutlinedTextField(
-                        value = calories,
-                        onValueChange = { calories = it },
-                        label = { Text("Calories") }
-                    )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Name", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(currentUsername ?: "Unknown", fontSize = 14.sp)
+                    }
 
-                    OutlinedTextField(
-                        value = workout,
-                        onValueChange = { workout = it },
-                        label = { Text("Workout") }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Account type", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(if (isGuest) "Guest" else "Normal", fontSize = 14.sp)
+                    }
 
-                    OutlinedTextField(
-                        value = hydration,
-                        onValueChange = { hydration = it },
-                        label = { Text("Hydration") }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("User ID", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("${currentUserId ?: "Unknown"}", fontSize = 14.sp)
+                    }
+
+                    Button(
+                        onClick = onLogOutClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Log out", fontSize = 20.sp)
+                    }
+
+                    Button(
+                        onClick = onSwitchAccountClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Switch account", fontSize = 20.sp)
+                    }
                 }
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        sharedPreferences.edit()
-                            .putString("calories", calories)
-                            .putString("workout", workout)
-                            .putString("hydration", hydration)
-                            .apply()
-
-                        showSettings = false
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
                 TextButton(onClick = { showSettings = false }) {
-                    Text("Cancel")
+                    Text("Close", fontSize = 20.sp)
                 }
             }
         )
