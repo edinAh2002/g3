@@ -1,4 +1,4 @@
-package com.example.frontpage
+package com.example.frontpage.food.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.example.frontpage.food.model.FoodItem
 
 @Composable
 fun NutritionScreen(
@@ -43,7 +44,7 @@ fun NutritionScreen(
     onDeleteFood: (FoodItem) -> Unit
 ) {
     val calorieGoal = 2500
-    val totalCalories = foodItems.sumOf { it.calories }
+    val totalCalories = foodItems.sumOf { it.calories ?: 0 }
     val remainingCalories = calorieGoal - totalCalories
 
     val totalProtein = foodItems.sumOf { it.protein }
@@ -209,8 +210,11 @@ fun SwipeToDeleteFoodCard(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(food.name, style = MaterialTheme.typography.titleMedium)
-                Text("${food.calories} kcal")
+                Text(food.mealName, style = MaterialTheme.typography.titleMedium)
+
+                Text(
+                    text = food.calories?.let { "$it kcal" } ?: "Calories not added"
+                )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Protein: ${food.protein}g")
@@ -312,7 +316,11 @@ fun MacroProgressRow(
             Row {
                 Text(
                     text = "$currentAmount",
-                    color = if (isOverGoal) Color.Red else MaterialTheme.colorScheme.onSurface
+                    color = if (isOverGoal) {
+                        Color.Red
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
 
                 Text(

@@ -46,6 +46,10 @@ import com.example.frontpage.auth.ui.AuthStartScreen
 import com.example.frontpage.auth.ui.LoginScreen
 import com.example.frontpage.auth.ui.SignUpScreen
 import com.example.frontpage.data.AppDatabase
+import com.example.frontpage.food.model.FoodItem
+import com.example.frontpage.food.ui.FoodLoggingScreen
+import com.example.frontpage.food.NutritionViewModel
+import com.example.frontpage.food.ui.NutritionScreen
 import com.example.frontpage.mood.ui.MoodFeature
 import com.example.frontpage.sleep.ui.SleepFeature
 import com.example.frontpage.stepcounter.StepCounterScreen
@@ -95,6 +99,9 @@ fun FitnessApp(
 
     val authUiState by authViewModel.uiState.collectAsState()
 
+    val nutritionViewModel: NutritionViewModel = viewModel()
+    val foodItems by nutritionViewModel.foodItems.collectAsState()
+
     LaunchedEffect(Unit) {
         authViewModel.loadCurrentUser()
     }
@@ -127,7 +134,6 @@ fun FitnessApp(
 
     val context = LocalContext.current
 
-    var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
     val moodController = MoodFeature.rememberController()
     val sleepController = SleepFeature.rememberController()
@@ -282,7 +288,7 @@ fun FitnessApp(
                         showFoodLogging = true
                     },
                     onDeleteFood = { foodToDelete ->
-                        foodItems = foodItems - foodToDelete
+                        nutritionViewModel.deleteFoodItem(foodToDelete.id)
                     }
                 )
             }
@@ -312,7 +318,7 @@ fun FitnessApp(
             if (showFoodLogging) {
                 FoodLoggingScreen(
                     onAddFood = { newFood ->
-                        foodItems = foodItems + newFood
+                        nutritionViewModel.addFoodItem(newFood)
                     },
                     onClose = {
                         showFoodLogging = false
@@ -363,7 +369,7 @@ fun HomeScreen(
     var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
 
     val calorieGoal = 2500
-    val totalCalories = foodItems.sumOf { it.calories }
+    val totalCalories = foodItems.sumOf { it.calories ?: 0}
     val calorieDisplay = "$totalCalories / $calorieGoal"
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
