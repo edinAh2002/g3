@@ -19,6 +19,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -26,12 +28,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-
-data class WorkoutEntry(
-    val name: String,
-    val durationMinutes: Int,
-    val exercises: List<String>
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.frontpage.workout.WorkoutViewModel
+import com.example.frontpage.workout.domain.decodeExercises
+import com.example.frontpage.workout.model.WorkoutEntry
 
 enum class WorkoutScreenMode {
     WorkoutList,
@@ -40,8 +40,11 @@ enum class WorkoutScreenMode {
 }
 
 @Composable
-fun WorkoutScreen() {
-    val workouts = remember { mutableStateListOf<WorkoutEntry>() }
+fun WorkoutScreen(
+    workoutViewModel: WorkoutViewModel = viewModel()
+) {
+    val workouts by workoutViewModel.workouts.collectAsState()
+
     val currentExercises = remember { mutableStateListOf<String>() }
 
     var screenMode by remember { mutableStateOf(WorkoutScreenMode.WorkoutList) }
@@ -53,6 +56,10 @@ fun WorkoutScreen() {
     var exerciseName by remember { mutableStateOf("") }
     var workoutName by remember { mutableStateOf("") }
     var workoutDuration by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        workoutViewModel.refreshCurrentUser()
+    }
 
     when (screenMode) {
         WorkoutScreenMode.WorkoutList -> {
@@ -90,6 +97,11 @@ fun WorkoutScreen() {
                 WorkoutDetailsScreen(
                     workout = workout,
                     onBackClick = {
+                        selectedWorkout = null
+                        screenMode = WorkoutScreenMode.WorkoutList
+                    },
+                    onDeleteClick = {
+                        workoutViewModel.deleteWorkout(workout.id)
                         selectedWorkout = null
                         screenMode = WorkoutScreenMode.WorkoutList
                     }
@@ -176,12 +188,10 @@ fun WorkoutScreen() {
                             duration != null &&
                             currentExercises.isNotEmpty()
                         ) {
-                            workouts.add(
-                                WorkoutEntry(
-                                    name = workoutName.trim(),
-                                    durationMinutes = duration,
-                                    exercises = currentExercises.toList()
-                                )
+                            workoutViewModel.addWorkout(
+                                name = workoutName.trim(),
+                                durationMinutes = duration,
+                                exercises = currentExercises.toList()
                             )
 
                             workoutName = ""
@@ -239,7 +249,10 @@ fun WorkoutListScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                items(workouts) { workout ->
+                items(
+                    items = workouts,
+                    key = { workout -> workout.id }
+                ) { workout ->
                     WorkoutListItem(
                         workout = workout,
                         onClick = { onWorkoutClick(workout) }
@@ -336,8 +349,11 @@ fun WorkoutBuilderScreen(
 @Composable
 fun WorkoutDetailsScreen(
     workout: WorkoutEntry,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
+    val exercises = decodeExercises(workout.exercisesText)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -369,7 +385,7 @@ fun WorkoutDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(workout.exercises) { exercise ->
+            items(exercises) { exercise ->
                 Card(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -390,6 +406,15 @@ fun WorkoutDetailsScreen(
         ) {
             Text("Back to workouts")
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(
+            onClick = onDeleteClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Delete workout")
+        }
     }
 }
 
@@ -398,6 +423,8 @@ fun WorkoutListItem(
     workout: WorkoutEntry,
     onClick: () -> Unit
 ) {
+    val exercises = decodeExercises(workout.exercisesText)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -424,7 +451,7 @@ fun WorkoutListItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "${workout.exercises.size} exercises",
+                text = "${exercises.size} exercises",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
