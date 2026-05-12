@@ -41,6 +41,7 @@ enum class WorkoutScreenMode {
 
 @Composable
 fun WorkoutScreen(
+    modifier: Modifier = Modifier,
     workoutViewModel: WorkoutViewModel = viewModel()
 ) {
     val workouts by workoutViewModel.workouts.collectAsState()
@@ -64,6 +65,7 @@ fun WorkoutScreen(
     when (screenMode) {
         WorkoutScreenMode.WorkoutList -> {
             WorkoutListScreen(
+                modifier = modifier,
                 workouts = workouts,
                 onLogWorkoutClick = {
                     currentExercises.clear()
@@ -78,6 +80,7 @@ fun WorkoutScreen(
 
         WorkoutScreenMode.WorkoutBuilder -> {
             WorkoutBuilderScreen(
+                modifier = modifier,
                 exercises = currentExercises,
                 onAddExerciseClick = {
                     showAddExerciseDialog = true
@@ -95,6 +98,7 @@ fun WorkoutScreen(
         WorkoutScreenMode.WorkoutDetails -> {
             selectedWorkout?.let { workout ->
                 WorkoutDetailsScreen(
+                    modifier = modifier,
                     workout = workout,
                     onBackClick = {
                         selectedWorkout = null
@@ -222,12 +226,13 @@ fun WorkoutScreen(
 
 @Composable
 fun WorkoutListScreen(
+    modifier: Modifier = Modifier,
     workouts: List<WorkoutEntry>,
     onLogWorkoutClick: () -> Unit,
     onWorkoutClick: (WorkoutEntry) -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Top
@@ -274,13 +279,14 @@ fun WorkoutListScreen(
 
 @Composable
 fun WorkoutBuilderScreen(
+    modifier: Modifier = Modifier,
     exercises: List<String>,
     onAddExerciseClick: () -> Unit,
     onFinishWorkoutClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Top
@@ -348,6 +354,7 @@ fun WorkoutBuilderScreen(
 
 @Composable
 fun WorkoutDetailsScreen(
+    modifier: Modifier = Modifier,
     workout: WorkoutEntry,
     onBackClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -355,7 +362,7 @@ fun WorkoutDetailsScreen(
     val exercises = decodeExercises(workout.exercisesText)
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.Top
