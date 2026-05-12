@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.sleep.SleepViewModel
+import com.example.frontpage.sleep.domain.SleepAnalytics
 import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.buildSleepScoreSummary
 
 @Composable
 fun SleepHomeSummaryCard(
@@ -42,7 +42,7 @@ fun SleepHomeSummaryCard(
 
     val variationMinutes = SleepCalculator.calculateSleepConsistencyVariationMinutes(last7DaysSleepLogs)
     val durationRangeMinutes = SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
-    val sleepScoreSummary = buildSleepScoreSummary(
+    val sleepScoreSummary = SleepAnalytics.buildSleepScoreSummary(
         latestSleep = latestSleep,
         goalMinutes = latestGoalMinutes,
         consistencyVariationMinutes = variationMinutes,

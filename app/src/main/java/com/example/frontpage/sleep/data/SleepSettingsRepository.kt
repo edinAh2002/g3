@@ -1,11 +1,15 @@
 package com.example.frontpage.sleep.data
 
-import android.net.Uri
 import android.content.Context
 import androidx.core.content.edit
-import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepDefaults
+import com.example.frontpage.sleep.model.SleepPageKey
+import com.example.frontpage.sleep.model.SleepPageLayout
+import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
+import com.example.frontpage.sleep.model.SleepPageSectionId
+import com.example.frontpage.sleep.model.SleepThemePresetId
+import com.example.frontpage.sleep.model.SleepThemeTarget
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
@@ -14,15 +18,6 @@ object SleepSettingsRepository {
     const val DEFAULT_SLEEP_GOAL_MINUTES: Int = SleepDefaults.SLEEP_GOAL_MINUTES
     const val DEFAULT_BEDTIME_MINUTES: Int = SleepDefaults.BEDTIME_MINUTES
     const val DEFAULT_WAKE_MINUTES: Int = SleepDefaults.WAKE_MINUTES
-
-    private const val PREFERENCES_NAME = "sleep_settings"
-    private const val GOAL_KEY_PREFIX = "sleep_goal_minutes_user_"
-    private const val DATE_GOAL_KEY_PREFIX = "sleep_date_goal_minutes_user_"
-    private const val WEEKDAY_GOAL_KEY_PREFIX = "sleep_weekday_goal_minutes_user_"
-    private const val WEEKDAY_BEDTIME_KEY_PREFIX = "sleep_weekday_bedtime_minutes_user_"
-    private const val WEEKDAY_WAKE_KEY_PREFIX = "sleep_weekday_wake_minutes_user_"
-    private const val CUSTOM_TAGS_KEY_PREFIX = "sleep_custom_tags_user_"
-    private const val CUSTOM_TAG_SEPARATOR = "|"
 
     fun getSleepGoalMinutes(
         context: Context,
@@ -41,8 +36,8 @@ object SleepSettingsRepository {
         dateMillis: Long
     ): Int {
         if (userId != null) {
-            val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-            val dateGoalKey = dateGoalKey(
+            val preferences = preferences(context)
+            val dateGoalKey = SleepSettingsStorageKeys.dateGoal(
                 userId = userId,
                 dateMillis = dateMillis
             )
@@ -69,14 +64,14 @@ object SleepSettingsRepository {
     ): Int {
         if (userId == null) return DEFAULT_SLEEP_GOAL_MINUTES
 
-        val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        val preferences = preferences(context)
         val defaultGoal = preferences.getInt(
-            goalKey(userId),
+            SleepSettingsStorageKeys.goal(userId),
             DEFAULT_SLEEP_GOAL_MINUTES
         )
 
         return preferences.getInt(
-            weekdayGoalKey(userId, weekday),
+            SleepSettingsStorageKeys.weekdayGoal(userId, weekday),
             defaultGoal
         )
     }
@@ -92,16 +87,16 @@ object SleepSettingsRepository {
         )
 
         if (userId != null) {
-            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            preferences(context)
                 .edit {
                     putInt(
-                        goalKey(userId),
+                        SleepSettingsStorageKeys.goal(userId),
                         goalMinutes
                     )
 
                     SleepWeekday.entries.forEach { weekday ->
                         putInt(
-                            weekdayGoalKey(userId, weekday),
+                            SleepSettingsStorageKeys.weekdayGoal(userId, weekday),
                             goalMinutes
                         )
                     }
@@ -123,10 +118,10 @@ object SleepSettingsRepository {
         )
 
         if (userId != null) {
-            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            preferences(context)
                 .edit {
                     putInt(
-                        dateGoalKey(
+                        SleepSettingsStorageKeys.dateGoal(
                             userId = userId,
                             dateMillis = dateMillis
                         ),
@@ -145,8 +140,8 @@ object SleepSettingsRepository {
     ) {
         if (userId == null) return
 
-        val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val dateGoalKey = dateGoalKey(
+        val preferences = preferences(context)
+        val dateGoalKey = SleepSettingsStorageKeys.dateGoal(
             userId = userId,
             dateMillis = dateMillis
         )
@@ -205,10 +200,10 @@ object SleepSettingsRepository {
         )
 
         if (userId != null) {
-            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            preferences(context)
                 .edit {
                     putInt(
-                        weekdayGoalKey(userId, weekday),
+                        SleepSettingsStorageKeys.weekdayGoal(userId, weekday),
                         goalMinutes
                     )
                 }
@@ -228,15 +223,15 @@ object SleepSettingsRepository {
         wakeMinutes: Int
     ): List<WeekdaySleepSettings> {
         if (userId != null) {
-            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            preferences(context)
                 .edit {
                     putInt(
-                        weekdayBedtimeKey(userId, weekday),
+                        SleepSettingsStorageKeys.weekdayBedtime(userId, weekday),
                         normalizeClockMinutes(bedtimeMinutes)
                     )
 
                     putInt(
-                        weekdayWakeKey(userId, weekday),
+                        SleepSettingsStorageKeys.weekdayWake(userId, weekday),
                         normalizeClockMinutes(wakeMinutes)
                     )
                 }
@@ -255,16 +250,16 @@ object SleepSettingsRepository {
         wakeMinutes: Int
     ): List<WeekdaySleepSettings> {
         if (userId != null) {
-            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            preferences(context)
                 .edit {
                     SleepWeekday.entries.forEach { weekday ->
                         putInt(
-                            weekdayBedtimeKey(userId, weekday),
+                            SleepSettingsStorageKeys.weekdayBedtime(userId, weekday),
                             normalizeClockMinutes(bedtimeMinutes)
                         )
 
                         putInt(
-                            weekdayWakeKey(userId, weekday),
+                            SleepSettingsStorageKeys.weekdayWake(userId, weekday),
                             normalizeClockMinutes(wakeMinutes)
                         )
                     }
@@ -283,14 +278,11 @@ object SleepSettingsRepository {
     ): List<SleepCustomTag> {
         if (userId == null) return emptyList()
 
-        val storedTags = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-            .getString(customTagsKey(userId), "")
+        val storedTags = preferences(context)
+            .getString(SleepSettingsStorageKeys.customTags(userId), "")
             .orEmpty()
 
-        if (storedTags.isBlank()) return emptyList()
-
-        return storedTags.lines()
-            .mapNotNull { line -> customTagFromStorageLine(line) }
+        return SleepSettingsStorageCodec.decodeCustomTags(storedTags)
     }
 
     fun addCustomTag(
@@ -355,40 +347,101 @@ object SleepSettingsRepository {
         return updatedTags
     }
 
-    private fun goalKey(userId: Long): String {
-        return "$GOAL_KEY_PREFIX$userId"
+    fun getSleepPageLayout(
+        context: Context,
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout {
+        if (userId == null) {
+            return SleepPageLayout(
+                pageKey = pageKey,
+                sectionIds = defaultSectionIds
+            )
+        }
+
+        val storedLayout = preferences(context)
+            .getString(SleepSettingsStorageKeys.pageLayout(userId, pageKey), null)
+
+        val sectionIds = storedLayout?.let { layout ->
+            SleepSettingsStorageCodec.decodePageSectionIds(layout)
+        } ?: defaultSectionIds
+
+        return SleepPageLayout(
+            pageKey = pageKey,
+            sectionIds = SleepPageLayoutDefaults.normalizeSectionIds(sectionIds)
+        )
     }
 
-    private fun dateGoalKey(
-        userId: Long,
-        dateMillis: Long
-    ): String {
-        return "$DATE_GOAL_KEY_PREFIX${userId}_${SleepDateUtils.formatIsoDate(dateMillis)}"
+    fun updateSleepPageLayout(
+        context: Context,
+        userId: Long?,
+        layout: SleepPageLayout
+    ): SleepPageLayout {
+        if (userId != null) {
+            preferences(context)
+                .edit {
+                    putString(
+                        SleepSettingsStorageKeys.pageLayout(userId, layout.pageKey),
+                        SleepSettingsStorageCodec.encodePageSectionIds(
+                            SleepPageLayoutDefaults.normalizeSectionIds(layout.sectionIds)
+                        )
+                    )
+                }
+        }
+
+        return layout.copy(
+            sectionIds = SleepPageLayoutDefaults.normalizeSectionIds(layout.sectionIds)
+        )
     }
 
-    private fun weekdayGoalKey(
-        userId: Long,
-        weekday: SleepWeekday
-    ): String {
-        return "$WEEKDAY_GOAL_KEY_PREFIX${userId}_${weekday.name}"
+    fun resetSleepPageLayout(
+        context: Context,
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout {
+        if (userId != null) {
+            preferences(context)
+                .edit {
+                    remove(SleepSettingsStorageKeys.pageLayout(userId, pageKey))
+                }
+        }
+
+        return SleepPageLayout(
+            pageKey = pageKey,
+            sectionIds = defaultSectionIds
+        )
     }
 
-    private fun weekdayBedtimeKey(
-        userId: Long,
-        weekday: SleepWeekday
-    ): String {
-        return "$WEEKDAY_BEDTIME_KEY_PREFIX${userId}_${weekday.name}"
+    fun getSleepThemePresetId(
+        context: Context,
+        userId: Long?
+    ): SleepThemePresetId {
+        if (userId == null) return SleepThemePresetId.Default
+
+        val storedPresetId = preferences(context)
+            .getString(SleepSettingsStorageKeys.themePreset(userId, SleepThemeTarget.Sleep), null)
+
+        return SleepThemePresetId.fromStorageValue(storedPresetId)
     }
 
-    private fun weekdayWakeKey(
-        userId: Long,
-        weekday: SleepWeekday
-    ): String {
-        return "$WEEKDAY_WAKE_KEY_PREFIX${userId}_${weekday.name}"
-    }
+    fun updateSleepThemePresetId(
+        context: Context,
+        userId: Long?,
+        presetId: SleepThemePresetId
+    ): SleepThemePresetId {
+        if (userId != null) {
+            preferences(context)
+                .edit {
+                    putString(
+                        SleepSettingsStorageKeys.themePreset(userId, SleepThemeTarget.Sleep),
+                        presetId.storageValue
+                    )
+                }
+        }
 
-    private fun customTagsKey(userId: Long): String {
-        return "$CUSTOM_TAGS_KEY_PREFIX$userId"
+        return presetId
     }
 
     private fun getBedtimeMinutesForWeekday(
@@ -398,9 +451,9 @@ object SleepSettingsRepository {
     ): Int {
         if (userId == null) return DEFAULT_BEDTIME_MINUTES
 
-        return context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        return preferences(context)
             .getInt(
-                weekdayBedtimeKey(userId, weekday),
+                SleepSettingsStorageKeys.weekdayBedtime(userId, weekday),
                 DEFAULT_BEDTIME_MINUTES
             )
     }
@@ -412,9 +465,9 @@ object SleepSettingsRepository {
     ): Int {
         if (userId == null) return DEFAULT_WAKE_MINUTES
 
-        return context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        return preferences(context)
             .getInt(
-                weekdayWakeKey(userId, weekday),
+                SleepSettingsStorageKeys.weekdayWake(userId, weekday),
                 DEFAULT_WAKE_MINUTES
             )
     }
@@ -424,37 +477,25 @@ object SleepSettingsRepository {
         userId: Long,
         tags: List<SleepCustomTag>
     ) {
-        val storedTags = tags.joinToString("\n") { tag ->
-            "${tag.id}$CUSTOM_TAG_SEPARATOR${Uri.encode(tag.label)}"
-        }
-
-        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        preferences(context)
             .edit {
                 putString(
-                    customTagsKey(userId),
-                    storedTags
+                    SleepSettingsStorageKeys.customTags(userId),
+                    SleepSettingsStorageCodec.encodeCustomTags(tags)
                 )
             }
     }
 
-    private fun customTagFromStorageLine(line: String): SleepCustomTag? {
-        val parts = line.split(CUSTOM_TAG_SEPARATOR, limit = 2)
-        val id = parts.getOrNull(0)?.takeIf { value -> value.isNotBlank() }
-            ?: return null
-
-        val label = parts.getOrNull(1)
-            ?.let { encodedLabel -> Uri.decode(encodedLabel) }
-            ?.takeIf { decodedLabel -> decodedLabel.isNotBlank() }
-            ?: return null
-
-        return SleepCustomTag(
-            id = id,
-            label = label
+    private fun preferences(context: Context) =
+        context.getSharedPreferences(
+            SleepSettingsStorageKeys.PREFERENCES_NAME,
+            Context.MODE_PRIVATE
         )
-    }
 
     private fun normalizeClockMinutes(minutes: Int): Int {
         val minutesInDay = 24 * 60
         return ((minutes % minutesInDay) + minutesInDay) % minutesInDay
     }
 }
+
+

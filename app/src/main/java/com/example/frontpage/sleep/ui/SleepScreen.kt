@@ -7,8 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,13 +22,19 @@ import androidx.health.connect.client.PermissionController
 import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDashboardStateBuilder
+import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.ui.components.SleepPageCustomizationPanel
 import com.example.frontpage.sleep.ui.components.SleepPageNavigation
+import com.example.frontpage.sleep.ui.components.SleepPageSectionRegistry
+import com.example.frontpage.sleep.ui.components.SleepTrackerHeader
 import com.example.frontpage.sleep.ui.dialogs.SleepGoalDialog
 import com.example.frontpage.sleep.ui.pages.SleepHistoryPage
 import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
 import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
 import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
+import com.example.frontpage.sleep.ui.theme.SleepTheme
+import com.example.frontpage.sleep.ui.theme.SleepThemeProvider
 
 @Composable
 fun SleepScreen(
@@ -41,11 +46,14 @@ fun SleepScreen(
 ) {
     var selectedPage by remember { mutableStateOf(SleepPage.Overview) }
     var showGoalDialog by remember { mutableStateOf(false) }
+    var isEditingPage by remember { mutableStateOf(false) }
 
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
     val weekdaySettings by viewModel.weekdaySettings.collectAsState()
     val customTags by viewModel.customTags.collectAsState()
+    val pageLayouts by viewModel.pageLayouts.collectAsState()
+    val themePresetId by viewModel.themePresetId.collectAsState()
     val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
     val dashboardStateBuilder = remember { SleepDashboardStateBuilder() }
@@ -63,6 +71,9 @@ fun SleepScreen(
     LaunchedEffect(viewModel) {
         viewModel.refreshCurrentUser()
         viewModel.refreshHealthConnectState()
+        viewModel.removeFakeMoodSleepContextLinks {
+            moodViewModel.loadMoods()
+        }
     }
 
     val dashboardState = dashboardStateBuilder.build(
@@ -72,141 +83,206 @@ fun SleepScreen(
         goalMinutesForDate = viewModel::getGoalMinutesForDate
     )
 
-    Column(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "Sleep Tracker",
-            style = MaterialTheme.typography.headlineSmall
-        )
+    val selectedPageKey = selectedPage.pageKey
+    val selectedPageLayout = pageLayouts[selectedPageKey]
+        ?: SleepPageLayoutDefaults.defaultLayout(selectedPageKey)
+    val canCustomizeSelectedPage = SleepPageSectionRegistry.sectionsFor(selectedPageKey).isNotEmpty()
 
-        SleepPageNavigation(
-            selectedPage = selectedPage,
-            onPageSelected = { selectedPage = it }
-        )
-
-        when (selectedPage) {
-            SleepPage.Overview -> {
-                SleepOverviewPage(
-                    latestSleep = dashboardState.latestSleep,
-                    goalMinutes = dashboardState.latestGoalMinutes,
-                    averageSleepMinutes = dashboardState.averageSleepMinutes,
-                    longestSleepMinutes = dashboardState.longestSleepMinutes,
-                    shortestSleepMinutes = dashboardState.shortestSleepMinutes,
-                    totalLogs = sleepLogs.size,
-                    weeklyChartData = dashboardState.weeklyChartData,
-                    sleepScoreSummary = dashboardState.sleepScoreSummary,
-                    sleepGoalBalance = dashboardState.sleepGoalBalance,
-                    streakSummary = dashboardState.streakSummary,
-                    onLogSleepClick = onLogSleepClick,
-                    onEditGoalClick = {
-                        showGoalDialog = true
-                    }
-                )
-            }
-
-            SleepPage.History -> {
-                SleepHistoryPage(
-                    sleepLogs = sleepLogs,
-                    goalMinutesForDate = viewModel::getGoalMinutesForDate,
-                    onEditEntry = { entry ->
-                        onEditSleepEntry(entry)
-                    },
-                    onDeleteEntry = { entry ->
-                        viewModel.deleteSleep(entry.id)
-                    }
-                )
-            }
-
-            SleepPage.Insights -> {
-                SleepInsightsPage(
-                    sleepLogs = sleepLogs,
-                    averageSleepMinutes = dashboardState.averageSleepMinutes,
-                    longestSleepMinutes = dashboardState.longestSleepMinutes,
-                    shortestSleepMinutes = dashboardState.shortestSleepMinutes,
-                    averageBedtimeMinutes = dashboardState.averageBedtimeMinutes,
-                    averageWakeTimeMinutes = dashboardState.averageWakeTimeMinutes,
-                    sleepConsistencyVariationMinutes = dashboardState.sleepConsistencyVariationMinutes,
-                    sleepDurationRangeMinutes = dashboardState.sleepDurationRangeMinutes,
-                    consistencyLogCount = dashboardState.last7DaysSleepLogs.size,
-                    sleepScoreSummary = dashboardState.sleepScoreSummary,
-                    sleepGoalBalance = dashboardState.sleepGoalBalance,
-                    streakSummary = dashboardState.streakSummary,
-                    primaryRecommendation = dashboardState.primaryRecommendation,
-                    sleepMoodInsight = dashboardState.sleepMoodInsight,
-                    sleepTagInsight = dashboardState.sleepTagInsight
-                )
-            }
-
-            SleepPage.Settings -> {
-                SleepSettingsPage(
-                    goalMinutes = goalMinutes,
-                    weekdaySettings = weekdaySettings,
-                    customTags = customTags,
-                    totalLogs = sleepLogs.size,
-                    healthConnectState = healthConnectState,
-                    onUpdateAllWeekdayGoals = { newGoalMinutes ->
-                        viewModel.updateSleepGoalMinutes(newGoalMinutes)
-                    },
-                    onClearSleepHistoryClick = {
-                        viewModel.clearAllLogs()
-                    },
-                    onUpdateWeekdayGoal = { weekday, newGoalMinutes ->
-                        viewModel.updateWeekdayGoalMinutes(
-                            weekday = weekday,
-                            newGoalMinutes = newGoalMinutes
-                        )
-                    },
-                    onUpdateWeekdayScheduleTargets = { weekday, bedtimeMinutes, wakeMinutes ->
-                        viewModel.updateWeekdayScheduleTargets(
-                            weekday = weekday,
-                            bedtimeMinutes = bedtimeMinutes,
-                            wakeMinutes = wakeMinutes
-                        )
-                    },
-                    onUpdateAllWeekdayScheduleTargets = { bedtimeMinutes, wakeMinutes ->
-                        viewModel.updateAllWeekdayScheduleTargets(
-                            bedtimeMinutes = bedtimeMinutes,
-                            wakeMinutes = wakeMinutes
-                        )
-                    },
-                    onAddCustomTag = { label ->
-                        viewModel.addCustomTag(label)
-                    },
-                    onDeleteCustomTag = { tagId ->
-                        viewModel.deleteCustomTag(tagId)
-                    },
-                    onRequestHealthConnectAccessClick = {
-                        viewModel.onHealthConnectPermissionRequestStarted()
-
-                        try {
-                            healthConnectPermissionLauncher.launch(viewModel.sleepHealthPermissions)
-                        } catch (_: Exception) {
-                            viewModel.onHealthConnectPermissionRequestFailed()
-                        }
-                    },
-                    onImportHealthConnectSleepClick = {
-                        viewModel.importHealthConnectSleep()
-                    }
-                )
-            }
+    LaunchedEffect(selectedPageKey, canCustomizeSelectedPage) {
+        if (!canCustomizeSelectedPage) {
+            isEditingPage = false
         }
     }
 
-    if (showGoalDialog) {
-        SleepGoalDialog(
-            currentGoalMinutes = goalMinutes,
-            onDismiss = {
-                showGoalDialog = false
-            },
-            onSave = { newGoalMinutes ->
-                viewModel.updateTodaySleepGoalMinutes(newGoalMinutes)
-                showGoalDialog = false
+    SleepThemeProvider(presetId = themePresetId) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = SleepTheme.colors.screenBackground,
+            contentColor = SleepTheme.colors.onBackground
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                SleepTrackerHeader(
+                    canCustomizeSelectedPage = canCustomizeSelectedPage,
+                    isEditingPage = isEditingPage,
+                    onToggleEdit = {
+                        isEditingPage = !isEditingPage
+                    }
+                )
+
+                SleepPageNavigation(
+                    selectedPage = selectedPage,
+                    onPageSelected = { selectedPage = it }
+                )
+
+                if (isEditingPage && canCustomizeSelectedPage) {
+                    SleepPageCustomizationPanel(
+                        pageKey = selectedPageKey,
+                        layout = selectedPageLayout,
+                        onAddSection = { sectionId ->
+                            viewModel.addSleepPageSection(
+                                pageKey = selectedPageKey,
+                                sectionId = sectionId
+                            )
+                        },
+                        onResetLayout = {
+                            viewModel.resetSleepPageLayout(selectedPageKey)
+                        }
+                    )
+                }
+
+                when (selectedPage) {
+                    SleepPage.Overview -> {
+                        SleepOverviewPage(
+                            dashboardState = dashboardState,
+                            sleepLogs = sleepLogs,
+                            pageLayout = selectedPageLayout,
+                            isEditing = isEditingPage,
+                            onRemoveSection = { sectionId ->
+                                viewModel.removeSleepPageSection(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onMoveSectionUp = { sectionId ->
+                                viewModel.moveSleepPageSectionUp(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onMoveSectionDown = { sectionId ->
+                                viewModel.moveSleepPageSectionDown(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onLogSleepClick = onLogSleepClick,
+                            onEditGoalClick = {
+                                showGoalDialog = true
+                            }
+                        )
+                    }
+
+                    SleepPage.History -> {
+                        SleepHistoryPage(
+                            sleepLogs = sleepLogs,
+                            goalMinutesForDate = viewModel::getGoalMinutesForDate,
+                            onEditEntry = { entry ->
+                                onEditSleepEntry(entry)
+                            },
+                            onDeleteEntry = { entry ->
+                                viewModel.deleteSleep(entry.id)
+                            }
+                        )
+                    }
+
+                    SleepPage.Insights -> {
+                        SleepInsightsPage(
+                            dashboardState = dashboardState,
+                            sleepLogs = sleepLogs,
+                            pageLayout = selectedPageLayout,
+                            isEditing = isEditingPage,
+                            onRemoveSection = { sectionId ->
+                                viewModel.removeSleepPageSection(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onMoveSectionUp = { sectionId ->
+                                viewModel.moveSleepPageSectionUp(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onMoveSectionDown = { sectionId ->
+                                viewModel.moveSleepPageSectionDown(
+                                    pageKey = selectedPageKey,
+                                    sectionId = sectionId
+                                )
+                            },
+                            onLogSleepClick = onLogSleepClick,
+                            onEditGoalClick = {
+                                showGoalDialog = true
+                            }
+                        )
+                    }
+
+                    SleepPage.Settings -> {
+                        SleepSettingsPage(
+                            goalMinutes = goalMinutes,
+                            weekdaySettings = weekdaySettings,
+                            customTags = customTags,
+                            totalLogs = sleepLogs.size,
+                            healthConnectState = healthConnectState,
+                            selectedThemePresetId = themePresetId,
+                            onUpdateAllWeekdayGoals = { newGoalMinutes ->
+                                viewModel.updateSleepGoalMinutes(newGoalMinutes)
+                            },
+                            onClearSleepHistoryClick = {
+                                viewModel.clearAllLogs()
+                            },
+                            onUpdateWeekdayGoal = { weekday, newGoalMinutes ->
+                                viewModel.updateWeekdayGoalMinutes(
+                                    weekday = weekday,
+                                    newGoalMinutes = newGoalMinutes
+                                )
+                            },
+                            onUpdateWeekdayScheduleTargets = { weekday, bedtimeMinutes, wakeMinutes ->
+                                viewModel.updateWeekdayScheduleTargets(
+                                    weekday = weekday,
+                                    bedtimeMinutes = bedtimeMinutes,
+                                    wakeMinutes = wakeMinutes
+                                )
+                            },
+                            onUpdateAllWeekdayScheduleTargets = { bedtimeMinutes, wakeMinutes ->
+                                viewModel.updateAllWeekdayScheduleTargets(
+                                    bedtimeMinutes = bedtimeMinutes,
+                                    wakeMinutes = wakeMinutes
+                                )
+                            },
+                            onAddCustomTag = { label ->
+                                viewModel.addCustomTag(label)
+                            },
+                            onDeleteCustomTag = { tagId ->
+                                viewModel.deleteCustomTag(tagId)
+                            },
+                            onUpdateThemePreset = { presetId ->
+                                viewModel.updateSleepThemePreset(presetId)
+                            },
+                            onRequestHealthConnectAccessClick = {
+                                viewModel.onHealthConnectPermissionRequestStarted()
+
+                                try {
+                                    healthConnectPermissionLauncher.launch(viewModel.sleepHealthPermissions)
+                                } catch (_: Exception) {
+                                    viewModel.onHealthConnectPermissionRequestFailed()
+                                }
+                            },
+                            onImportHealthConnectSleepClick = {
+                                viewModel.importHealthConnectSleep()
+                            }
+                        )
+                    }
+                }
             }
-        )
+        }
+
+        if (showGoalDialog) {
+            SleepGoalDialog(
+                currentGoalMinutes = goalMinutes,
+                onDismiss = {
+                    showGoalDialog = false
+                },
+                onSave = { newGoalMinutes ->
+                    viewModel.updateTodaySleepGoalMinutes(newGoalMinutes)
+                    showGoalDialog = false
+                }
+            )
+        }
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -51,7 +52,10 @@ import com.example.frontpage.food.ui.FoodLoggingScreen
 import com.example.frontpage.food.NutritionViewModel
 import com.example.frontpage.food.ui.NutritionScreen
 import com.example.frontpage.mood.ui.MoodFeature
+import com.example.frontpage.sleep.SleepViewModel
+import com.example.frontpage.sleep.model.SleepThemePresetId
 import com.example.frontpage.sleep.ui.SleepFeature
+import com.example.frontpage.sleep.ui.theme.SleepThemePresetCatalog
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
@@ -101,6 +105,8 @@ fun FitnessApp(
 
     val nutritionViewModel: NutritionViewModel = viewModel()
     val foodItems by nutritionViewModel.foodItems.collectAsState()
+    val sleepViewModel: SleepViewModel = viewModel()
+    val sleepThemePresetId by sleepViewModel.themePresetId.collectAsState()
 
     LaunchedEffect(Unit) {
         authViewModel.loadCurrentUser()
@@ -137,6 +143,7 @@ fun FitnessApp(
     var showFoodLogging by remember { mutableStateOf(false) }
     val moodController = MoodFeature.rememberController()
     val sleepController = SleepFeature.rememberController()
+    val sleepNavigationAccent = sleepNavigationAccentFor(sleepThemePresetId)
 
     Scaffold(
         bottomBar = {
@@ -181,7 +188,12 @@ fun FitnessApp(
                         selected = selectedScreen == AppScreen.Sleep,
                         onClick = { selectedScreen = AppScreen.Sleep },
                         label = { Text("Sleep") },
-                        icon = { Text("🌙") }
+                        icon = { Text("🌙") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = sleepNavigationAccent.selectedIconColor,
+                            selectedTextColor = sleepNavigationAccent.selectedTextColor,
+                            indicatorColor = sleepNavigationAccent.selectedIndicatorColor
+                        )
                     )
                 }
             }
@@ -296,7 +308,8 @@ fun FitnessApp(
             AppScreen.Sleep -> {
                 SleepFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    controller = sleepController
+                    controller = sleepController,
+                    viewModel = sleepViewModel
                 )
             }
 
@@ -331,10 +344,34 @@ fun FitnessApp(
             )
 
             SleepFeature.DialogHost(
-                controller = sleepController
+                controller = sleepController,
+                viewModel = sleepViewModel
             )
         }
     }
+}
+
+private data class NavigationItemAccent(
+    val selectedIndicatorColor: Color,
+    val selectedIconColor: Color,
+    val selectedTextColor: Color
+)
+
+@Composable
+private fun sleepNavigationAccentFor(
+    presetId: SleepThemePresetId
+): NavigationItemAccent {
+    val sleepTheme = SleepThemePresetCatalog.presetFor(
+        presetId = presetId,
+        baseColorScheme = MaterialTheme.colorScheme
+    )
+    val colors = sleepTheme.colors
+
+    return NavigationItemAccent(
+        selectedIndicatorColor = colors.primary,
+        selectedIconColor = colors.onPrimary,
+        selectedTextColor = colors.primary
+    )
 }
 
 @Composable

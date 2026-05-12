@@ -51,7 +51,7 @@ class SleepDashboardStateBuilder {
             sleepEntry.durationMinutes
         } ?: 0
 
-        val weeklyChartData = buildWeeklySleepChartData(sleepLogs)
+        val weeklyChartData = SleepAnalytics.buildWeeklySleepChartData(sleepLogs)
         val averageBedtimeMinutes = SleepCalculator.calculateAverageBedtimeMinutes(sleepLogs)
         val averageWakeTimeMinutes = SleepCalculator.calculateAverageWakeTimeMinutes(sleepLogs)
         val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
@@ -66,24 +66,24 @@ class SleepDashboardStateBuilder {
         val sleepDurationRangeMinutes =
             SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
 
-        val sleepScoreSummary = buildSleepScoreSummary(
+        val sleepScoreSummary = SleepAnalytics.buildSleepScoreSummary(
             latestSleep = latestSleep,
             goalMinutes = latestGoalMinutes,
             consistencyVariationMinutes = sleepConsistencyVariationMinutes,
             durationRangeMinutes = sleepDurationRangeMinutes
         )
 
-        val sleepGoalBalance = buildSleepGoalBalance(
+        val sleepGoalBalance = SleepAnalytics.buildSleepGoalBalance(
             sleepLogs = last7DaysSleepLogs,
             goalMinutesForDate = goalMinutesForDate
         )
 
-        val streakSummary = buildSleepStreakSummary(
+        val streakSummary = SleepAnalytics.buildSleepStreakSummary(
             sleepLogs = sleepLogs,
             goalMinutesForDate = goalMinutesForDate
         )
 
-        val primaryRecommendation = buildPrimarySleepRecommendation(
+        val primaryRecommendation = SleepAnalytics.buildPrimarySleepRecommendation(
             latestSleep = latestSleep,
             goalMinutes = latestGoalMinutes,
             sleepGoalBalance = sleepGoalBalance,
@@ -92,12 +92,12 @@ class SleepDashboardStateBuilder {
             durationRangeMinutes = sleepDurationRangeMinutes
         )
 
-        val sleepMoodInsight = buildSleepMoodInsight(
+        val sleepMoodInsight = SleepAnalytics.buildSleepMoodInsight(
             sleepLogs = sleepLogs,
             moodEntries = moodEntries
         )
 
-        val sleepTagInsight = buildSleepTagInsight(sleepLogs)
+        val sleepTagInsight = SleepAnalytics.buildSleepTagInsight(sleepLogs)
 
         return SleepDashboardState(
             latestSleep = latestSleep,

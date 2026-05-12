@@ -11,6 +11,7 @@ import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.ui.cards.SleepHomeSummaryCard
 import com.example.frontpage.sleep.ui.dialogs.SleepLogDialog
+import com.example.frontpage.sleep.ui.theme.SleepThemeProvider
 
 object SleepFeature {
 
@@ -33,10 +34,12 @@ object SleepFeature {
     @Composable
     fun MainRoute(
         modifier: Modifier = Modifier,
-        controller: SleepFeatureController
+        controller: SleepFeatureController,
+        viewModel: SleepViewModel = viewModel()
     ) {
         SleepScreen(
             modifier = modifier,
+            viewModel = viewModel,
             onLogSleepClick = {
                 controller.openLogDialog()
             },
@@ -54,43 +57,46 @@ object SleepFeature {
         val goalMinutes by viewModel.goalMinutes.collectAsState()
         val weekdaySettings by viewModel.weekdaySettings.collectAsState()
         val customTags by viewModel.customTags.collectAsState()
+        val themePresetId by viewModel.themePresetId.collectAsState()
 
-        if (controller.showLogDialog) {
-            LaunchedEffect(Unit) {
-                viewModel.refreshCurrentUser()
-            }
-
-            SleepLogDialog(
-                existingEntry = controller.editingEntry,
-                goalMinutes = goalMinutes,
-                weekdaySettings = weekdaySettings,
-                customTags = customTags,
-                onDismiss = {
-                    controller.closeLogDialog()
-                },
-                onSave = { draft ->
-                    val editingEntry = controller.editingEntry
-                    val date = SleepDateUtils.formatHistoryDate(draft.wakeDateMillis)
-
-                    if (editingEntry == null) {
-                        viewModel.addSleep(
-                            draft.toNewEntry(
-                                id = System.currentTimeMillis(),
-                                date = date
-                            )
-                        )
-                    } else {
-                        viewModel.updateSleep(
-                            draft.applyTo(
-                                entry = editingEntry,
-                                date = date
-                            )
-                        )
-                    }
-
-                    controller.closeLogDialog()
+        SleepThemeProvider(presetId = themePresetId) {
+            if (controller.showLogDialog) {
+                LaunchedEffect(Unit) {
+                    viewModel.refreshCurrentUser()
                 }
-            )
+
+                SleepLogDialog(
+                    existingEntry = controller.editingEntry,
+                    goalMinutes = goalMinutes,
+                    weekdaySettings = weekdaySettings,
+                    customTags = customTags,
+                    onDismiss = {
+                        controller.closeLogDialog()
+                    },
+                    onSave = { draft ->
+                        val editingEntry = controller.editingEntry
+                        val date = SleepDateUtils.formatHistoryDate(draft.wakeDateMillis)
+
+                        if (editingEntry == null) {
+                            viewModel.addSleep(
+                                draft.toNewEntry(
+                                    id = System.currentTimeMillis(),
+                                    date = date
+                                )
+                            )
+                        } else {
+                            viewModel.updateSleep(
+                                draft.applyTo(
+                                    entry = editingEntry,
+                                    date = date
+                                )
+                            )
+                        }
+
+                        controller.closeLogDialog()
+                    }
+                )
+            }
         }
     }
 }
