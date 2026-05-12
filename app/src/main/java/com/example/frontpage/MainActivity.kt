@@ -167,7 +167,7 @@ fun FitnessApp(
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Mood,
                         onClick = { selectedScreen = AppScreen.Mood },
-                        label = { Text("Mood") },
+                        label = { Text("com/example/frontpage/reminders/notifiers") },
                         icon = { Text("🙂") }
                     )
 
