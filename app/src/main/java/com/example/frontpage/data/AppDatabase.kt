@@ -41,7 +41,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sleepDao(): SleepDao
     abstract fun userDao(): UserDao
     abstract fun workoutDao(): WorkoutDao
-
     abstract fun foodDao(): FoodDao
     abstract fun pageThemeDao(): PageThemeDao
 

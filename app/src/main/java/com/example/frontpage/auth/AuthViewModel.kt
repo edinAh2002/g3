@@ -46,6 +46,14 @@ class AuthViewModel(
         return authRepository.getCurrentUserId()
     }
 
+    fun getCurrentUsername(): String? {
+        return _uiState.value.currentUsername
+    }
+
+    fun isCurrentUserGuest(): Boolean {
+        return _uiState.value.isGuest
+    }
+
     fun loadCurrentUser() {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser()
