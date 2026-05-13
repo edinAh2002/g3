@@ -8,8 +8,6 @@ import com.example.frontpage.sleep.model.SleepPageKey
 import com.example.frontpage.sleep.model.SleepPageLayout
 import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
 import com.example.frontpage.sleep.model.SleepPageSectionId
-import com.example.frontpage.sleep.model.SleepThemePresetId
-import com.example.frontpage.sleep.model.SleepThemeTarget
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
@@ -412,36 +410,6 @@ object SleepSettingsRepository {
             pageKey = pageKey,
             sectionIds = defaultSectionIds
         )
-    }
-
-    fun getSleepThemePresetId(
-        context: Context,
-        userId: Long?
-    ): SleepThemePresetId {
-        if (userId == null) return SleepThemePresetId.Default
-
-        val storedPresetId = preferences(context)
-            .getString(SleepSettingsStorageKeys.themePreset(userId, SleepThemeTarget.Sleep), null)
-
-        return SleepThemePresetId.fromStorageValue(storedPresetId)
-    }
-
-    fun updateSleepThemePresetId(
-        context: Context,
-        userId: Long?,
-        presetId: SleepThemePresetId
-    ): SleepThemePresetId {
-        if (userId != null) {
-            preferences(context)
-                .edit {
-                    putString(
-                        SleepSettingsStorageKeys.themePreset(userId, SleepThemeTarget.Sleep),
-                        presetId.storageValue
-                    )
-                }
-        }
-
-        return presetId
     }
 
     private fun getBedtimeMinutesForWeekday(

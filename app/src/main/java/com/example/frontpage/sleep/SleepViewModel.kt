@@ -25,7 +25,6 @@ import com.example.frontpage.sleep.model.SleepPageKey
 import com.example.frontpage.sleep.model.SleepPageLayout
 import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
 import com.example.frontpage.sleep.model.SleepPageSectionId
-import com.example.frontpage.sleep.model.SleepThemePresetId
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,9 +67,6 @@ class SleepViewModel(
 
     private val _pageLayouts = MutableStateFlow(SleepPageLayoutDefaults.defaultLayouts())
     val pageLayouts: StateFlow<Map<SleepPageKey, SleepPageLayout>> = _pageLayouts
-
-    private val _themePresetId = MutableStateFlow(SleepThemePresetId.Default)
-    val themePresetId: StateFlow<SleepThemePresetId> = _themePresetId
 
     private val _healthConnectState = MutableStateFlow(SleepHealthConnectState())
     val healthConnectState: StateFlow<SleepHealthConnectState> = _healthConnectState
@@ -303,13 +299,6 @@ class SleepViewModel(
         _pageLayouts.value = _pageLayouts.value + (pageKey to layout)
     }
 
-    fun updateSleepThemePreset(presetId: SleepThemePresetId) {
-        _themePresetId.value = settingsDataSource.updateSleepThemePresetId(
-            userId = getCurrentUserIdOrRefresh(),
-            presetId = presetId
-        )
-    }
-
     fun removeFakeMoodSleepContextLinks(onRemoved: () -> Unit = {}) {
         viewModelScope.launch {
             val userId = getCurrentUserIdOrRefresh() ?: return@launch
@@ -459,9 +448,6 @@ class SleepViewModel(
             userId = currentUserId.value
         )
 
-        _themePresetId.value = settingsDataSource.getSleepThemePresetId(
-            userId = currentUserId.value
-        )
     }
 
     private fun moveSleepPageSection(

@@ -2,7 +2,6 @@ package com.example.frontpage.sleep.data
 
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.model.SleepPageKey
-import com.example.frontpage.sleep.model.SleepThemeTarget
 import com.example.frontpage.sleep.model.SleepWeekday
 
 internal object SleepSettingsStorageKeys {
@@ -15,7 +14,6 @@ internal object SleepSettingsStorageKeys {
     private const val WEEKDAY_WAKE_KEY_PREFIX = "sleep_weekday_wake_minutes_user_"
     private const val CUSTOM_TAGS_KEY_PREFIX = "sleep_custom_tags_user_"
     private const val PAGE_LAYOUT_KEY_PREFIX = "sleep_page_layout_user_"
-    private const val THEME_PRESET_KEY_PREFIX = "theme_preset_user_"
 
     fun goal(userId: Long): String {
         return "$GOAL_KEY_PREFIX$userId"
@@ -60,10 +58,4 @@ internal object SleepSettingsStorageKeys {
         return "$PAGE_LAYOUT_KEY_PREFIX${userId}_${pageKey.storageValue}"
     }
 
-    fun themePreset(
-        userId: Long,
-        target: SleepThemeTarget
-    ): String {
-        return "$THEME_PRESET_KEY_PREFIX${userId}_${target.storageValue}"
-    }
 }

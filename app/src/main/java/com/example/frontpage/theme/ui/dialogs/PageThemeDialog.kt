@@ -1,4 +1,4 @@
-package com.example.frontpage.sleep.ui.dialogs
+package com.example.frontpage.theme.ui.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -17,6 +17,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,52 +33,67 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.model.SleepThemePresetId
-import com.example.frontpage.sleep.ui.theme.SleepThemeCustomActionDescriptor
-import com.example.frontpage.sleep.ui.theme.SleepThemePreset
-import com.example.frontpage.sleep.ui.theme.SleepThemePresetCatalog
+import com.example.frontpage.theme.domain.PageThemeCatalog
+import com.example.frontpage.theme.model.PageThemeCustomActionDescriptor
+import com.example.frontpage.theme.model.PageThemeCustomPresetDraft
+import com.example.frontpage.theme.model.PageThemePreset
+import com.example.frontpage.theme.model.PageThemePresetId
+import com.example.frontpage.theme.model.PageThemeTargetKey
 
 private const val THEME_PREVIEW_COLUMNS = 4
 
 @Composable
-internal fun SleepThemeDialog(
-    selectedThemePresetId: SleepThemePresetId,
-    onSelectThemePreset: (SleepThemePresetId) -> Unit,
+fun PageThemeDialog(
+    target: PageThemeTargetKey,
+    catalog: PageThemeCatalog,
+    selectedThemePresetId: PageThemePresetId,
+    customThemePresets: List<PageThemePreset>,
+    onSelectThemePreset: (PageThemePresetId) -> Unit,
+    onCreateCustomTheme: (PageThemeCustomPresetDraft) -> Unit,
     onDismiss: () -> Unit
 ) {
     val baseColorScheme = MaterialTheme.colorScheme
-    val presetTiles = SleepThemePresetCatalog.descriptors.map { descriptor ->
-        SleepThemePresetCatalog.presetFor(
+    val targetConfig = catalog.configFor(target)
+    val builtInPresetTiles = catalog.descriptorsFor(target).map { descriptor ->
+        catalog.presetFor(
+            target = target,
             presetId = descriptor.id,
             baseColorScheme = baseColorScheme
         )
     }
-    var showCustomMessage by remember { mutableStateOf(false) }
+    val presetTiles = builtInPresetTiles + customThemePresets
+    val customPalettePresets = listOf(
+        PageThemePresetId.PurpleRecovery,
+        PageThemePresetId.OceanRest,
+        PageThemePresetId.ForestCalm,
+        PageThemePresetId.RoseDusk
+    ).map { presetId ->
+        catalog.presetFor(
+            target = target,
+            presetId = presetId,
+            baseColorScheme = baseColorScheme
+        )
+    }
+    var showCustomEditor by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Sleep Theme")
+            Text(targetConfig.pickerTitle)
         },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SleepThemePreviewGrid(
+                ThemePreviewGrid(
                     presetTiles = presetTiles,
                     selectedThemePresetId = selectedThemePresetId,
+                    customActionDescriptor = catalog.customActionDescriptor,
                     onSelectThemePreset = onSelectThemePreset,
                     onCreateCustomThemeClick = {
-                        showCustomMessage = true
+                        showCustomEditor = true
                     }
                 )
-
-                if (showCustomMessage) {
-                    Text(
-                        text = "Custom theme creation will use this slot.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
         },
         confirmButton = {
@@ -86,18 +102,33 @@ internal fun SleepThemeDialog(
             }
         }
     )
+
+    if (showCustomEditor) {
+        CustomThemeDialog(
+            targetDisplayName = targetConfig.displayName,
+            palettePresets = customPalettePresets,
+            onDismiss = {
+                showCustomEditor = false
+            },
+            onCreate = { draft ->
+                onCreateCustomTheme(draft)
+                showCustomEditor = false
+            }
+        )
+    }
 }
 
 @Composable
-private fun SleepThemePreviewGrid(
-    presetTiles: List<SleepThemePreset>,
-    selectedThemePresetId: SleepThemePresetId,
-    onSelectThemePreset: (SleepThemePresetId) -> Unit,
+private fun ThemePreviewGrid(
+    presetTiles: List<PageThemePreset>,
+    selectedThemePresetId: PageThemePresetId,
+    customActionDescriptor: PageThemeCustomActionDescriptor,
+    onSelectThemePreset: (PageThemePresetId) -> Unit,
     onCreateCustomThemeClick: () -> Unit
 ) {
-    val tiles: List<SleepThemeGridTile> = presetTiles.map { preset ->
-        SleepThemeGridTile.Preset(preset)
-    } + SleepThemeGridTile.Custom(SleepThemePresetCatalog.customActionDescriptor)
+    val tiles: List<ThemeGridTile> = presetTiles.map { preset ->
+        ThemeGridTile.Preset(preset)
+    } + ThemeGridTile.Custom(customActionDescriptor)
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -109,8 +140,8 @@ private fun SleepThemePreviewGrid(
             ) {
                 rowTiles.forEach { tile ->
                     when (tile) {
-                        is SleepThemeGridTile.Preset -> {
-                            SleepThemePresetTile(
+                        is ThemeGridTile.Preset -> {
+                            ThemePresetTile(
                                 preset = tile.preset,
                                 selected = tile.preset.descriptor.id == selectedThemePresetId,
                                 modifier = Modifier.weight(1f),
@@ -120,8 +151,8 @@ private fun SleepThemePreviewGrid(
                             )
                         }
 
-                        is SleepThemeGridTile.Custom -> {
-                            SleepThemeCustomTile(
+                        is ThemeGridTile.Custom -> {
+                            ThemeCustomTile(
                                 descriptor = tile.descriptor,
                                 modifier = Modifier.weight(1f),
                                 onClick = onCreateCustomThemeClick
@@ -139,8 +170,8 @@ private fun SleepThemePreviewGrid(
 }
 
 @Composable
-private fun SleepThemePresetTile(
-    preset: SleepThemePreset,
+private fun ThemePresetTile(
+    preset: PageThemePreset,
     selected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -173,7 +204,7 @@ private fun SleepThemePresetTile(
             verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            SleepThemeMiniPreview(preset = preset)
+            ThemeMiniPreview(preset = preset)
 
             Text(
                 text = preset.descriptor.displayName,
@@ -187,8 +218,8 @@ private fun SleepThemePresetTile(
 }
 
 @Composable
-private fun SleepThemeCustomTile(
-    descriptor: SleepThemeCustomActionDescriptor,
+private fun ThemeCustomTile(
+    descriptor: PageThemeCustomActionDescriptor,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -236,8 +267,153 @@ private fun SleepThemeCustomTile(
 }
 
 @Composable
-private fun SleepThemeMiniPreview(
-    preset: SleepThemePreset
+private fun CustomThemeDialog(
+    targetDisplayName: String,
+    palettePresets: List<PageThemePreset>,
+    onDismiss: () -> Unit,
+    onCreate: (PageThemeCustomPresetDraft) -> Unit
+) {
+    var themeName by remember { mutableStateOf("") }
+    var selectedPreset by remember {
+        mutableStateOf(palettePresets.first())
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Custom $targetDisplayName Theme")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = themeName,
+                    onValueChange = { value ->
+                        themeName = value
+                    },
+                    label = {
+                        Text("Theme name")
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = "Palette",
+                    style = MaterialTheme.typography.titleSmall
+                )
+
+                palettePresets.chunked(2).forEach { rowPresets ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowPresets.forEach { preset ->
+                            ThemePaletteTile(
+                                preset = preset,
+                                selected = preset.descriptor.id == selectedPreset.descriptor.id,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    selectedPreset = preset
+                                }
+                            )
+                        }
+
+                        repeat(2 - rowPresets.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                ThemeMiniPreview(preset = selectedPreset)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val cleanName = themeName.trim().ifBlank {
+                        selectedPreset.descriptor.displayName
+                    }
+
+                    onCreate(
+                        PageThemeCustomPresetDraft(
+                            displayName = cleanName,
+                            description = "Custom $targetDisplayName theme based on ${selectedPreset.descriptor.displayName}.",
+                            colors = selectedPreset.colors,
+                            layoutStyle = selectedPreset.layoutStyle
+                        )
+                    )
+                }
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun ThemePaletteTile(
+    preset: PageThemePreset,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val colors = preset.colors
+
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                colors.primarySoft
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) colors.primary else MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(22.dp)
+                    .weight(0.35f)
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                colors.headerGradientStart,
+                                colors.headerGradientEnd
+                            )
+                        )
+                    )
+            )
+
+            Text(
+                text = preset.descriptor.displayName,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(0.65f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeMiniPreview(
+    preset: PageThemePreset
 ) {
     val colors = preset.colors
 
@@ -304,12 +480,12 @@ private fun SleepThemeMiniPreview(
     }
 }
 
-private sealed interface SleepThemeGridTile {
+private sealed interface ThemeGridTile {
     data class Preset(
-        val preset: SleepThemePreset
-    ) : SleepThemeGridTile
+        val preset: PageThemePreset
+    ) : ThemeGridTile
 
     data class Custom(
-        val descriptor: SleepThemeCustomActionDescriptor
-    ) : SleepThemeGridTile
+        val descriptor: PageThemeCustomActionDescriptor
+    ) : ThemeGridTile
 }

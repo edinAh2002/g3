@@ -34,13 +34,16 @@ import com.example.frontpage.sleep.ui.pages.SleepInsightsPage
 import com.example.frontpage.sleep.ui.pages.SleepOverviewPage
 import com.example.frontpage.sleep.ui.pages.SleepSettingsPage
 import com.example.frontpage.sleep.ui.theme.SleepTheme
-import com.example.frontpage.sleep.ui.theme.SleepThemeProvider
+import com.example.frontpage.theme.model.PageThemeTargetKey
+import com.example.frontpage.theme.ui.PageThemeController
+import com.example.frontpage.theme.ui.components.PageThemeProvider
 
 @Composable
 fun SleepScreen(
     modifier: Modifier = Modifier,
     onLogSleepClick: () -> Unit,
     onEditSleepEntry: (SleepEntry) -> Unit,
+    themeController: PageThemeController,
     viewModel: SleepViewModel = viewModel(),
     moodViewModel: MoodViewModel = viewModel()
 ) {
@@ -53,7 +56,12 @@ fun SleepScreen(
     val weekdaySettings by viewModel.weekdaySettings.collectAsState()
     val customTags by viewModel.customTags.collectAsState()
     val pageLayouts by viewModel.pageLayouts.collectAsState()
-    val themePresetId by viewModel.themePresetId.collectAsState()
+    val themePreferences by themeController.preferences.collectAsState()
+    val customThemePresets by themeController.customPresets.collectAsState()
+    val themePresetId = themeController.presetIdFor(
+        target = PageThemeTargetKey.Sleep,
+        preferences = themePreferences
+    )
     val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
     val dashboardStateBuilder = remember { SleepDashboardStateBuilder() }
@@ -94,7 +102,10 @@ fun SleepScreen(
         }
     }
 
-    SleepThemeProvider(presetId = themePresetId) {
+    PageThemeProvider(
+        controller = themeController,
+        target = PageThemeTargetKey.Sleep
+    ) {
         Surface(
             modifier = modifier.fillMaxSize(),
             color = SleepTheme.colors.screenBackground,
@@ -220,6 +231,10 @@ fun SleepScreen(
                             totalLogs = sleepLogs.size,
                             healthConnectState = healthConnectState,
                             selectedThemePresetId = themePresetId,
+                            customThemePresets = themeController.presetsFor(
+                                target = PageThemeTargetKey.Sleep,
+                                customPresets = customThemePresets
+                            ),
                             onUpdateAllWeekdayGoals = { newGoalMinutes ->
                                 viewModel.updateSleepGoalMinutes(newGoalMinutes)
                             },
@@ -252,7 +267,16 @@ fun SleepScreen(
                                 viewModel.deleteCustomTag(tagId)
                             },
                             onUpdateThemePreset = { presetId ->
-                                viewModel.updateSleepThemePreset(presetId)
+                                themeController.updateThemePreset(
+                                    target = PageThemeTargetKey.Sleep,
+                                    presetId = presetId
+                                )
+                            },
+                            onCreateCustomTheme = { draft ->
+                                themeController.createCustomThemePreset(
+                                    target = PageThemeTargetKey.Sleep,
+                                    draft = draft
+                                )
                             },
                             onRequestHealthConnectAccessClick = {
                                 viewModel.onHealthConnectPermissionRequestStarted()

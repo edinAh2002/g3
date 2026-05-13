@@ -5,7 +5,6 @@ import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepPageKey
 import com.example.frontpage.sleep.model.SleepPageLayout
 import com.example.frontpage.sleep.model.SleepPageSectionId
-import com.example.frontpage.sleep.model.SleepThemePresetId
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
@@ -85,12 +84,6 @@ interface SleepSettingsDataSource {
         defaultSectionIds: List<SleepPageSectionId>
     ): SleepPageLayout
 
-    fun getSleepThemePresetId(userId: Long?): SleepThemePresetId
-
-    fun updateSleepThemePresetId(
-        userId: Long?,
-        presetId: SleepThemePresetId
-    ): SleepThemePresetId
 }
 
 class SharedPreferencesSleepSettingsDataSource(
@@ -266,21 +259,4 @@ class SharedPreferencesSleepSettingsDataSource(
         )
     }
 
-    override fun getSleepThemePresetId(userId: Long?): SleepThemePresetId {
-        return SleepSettingsRepository.getSleepThemePresetId(
-            context = context,
-            userId = userId
-        )
-    }
-
-    override fun updateSleepThemePresetId(
-        userId: Long?,
-        presetId: SleepThemePresetId
-    ): SleepThemePresetId {
-        return SleepSettingsRepository.updateSleepThemePresetId(
-            context = context,
-            userId = userId,
-            presetId = presetId
-        )
-    }
 }

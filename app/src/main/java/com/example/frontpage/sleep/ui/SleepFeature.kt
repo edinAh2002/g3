@@ -11,7 +11,9 @@ import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDateUtils
 import com.example.frontpage.sleep.ui.cards.SleepHomeSummaryCard
 import com.example.frontpage.sleep.ui.dialogs.SleepLogDialog
-import com.example.frontpage.sleep.ui.theme.SleepThemeProvider
+import com.example.frontpage.theme.model.PageThemeTargetKey
+import com.example.frontpage.theme.ui.PageThemeController
+import com.example.frontpage.theme.ui.components.PageThemeProvider
 
 object SleepFeature {
 
@@ -35,11 +37,13 @@ object SleepFeature {
     fun MainRoute(
         modifier: Modifier = Modifier,
         controller: SleepFeatureController,
+        themeController: PageThemeController,
         viewModel: SleepViewModel = viewModel()
     ) {
         SleepScreen(
             modifier = modifier,
             viewModel = viewModel,
+            themeController = themeController,
             onLogSleepClick = {
                 controller.openLogDialog()
             },
@@ -52,14 +56,17 @@ object SleepFeature {
     @Composable
     fun DialogHost(
         controller: SleepFeatureController,
+        themeController: PageThemeController,
         viewModel: SleepViewModel = viewModel()
     ) {
         val goalMinutes by viewModel.goalMinutes.collectAsState()
         val weekdaySettings by viewModel.weekdaySettings.collectAsState()
         val customTags by viewModel.customTags.collectAsState()
-        val themePresetId by viewModel.themePresetId.collectAsState()
 
-        SleepThemeProvider(presetId = themePresetId) {
+        PageThemeProvider(
+            controller = themeController,
+            target = PageThemeTargetKey.Sleep
+        ) {
             if (controller.showLogDialog) {
                 LaunchedEffect(Unit) {
                     viewModel.refreshCurrentUser()
