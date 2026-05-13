@@ -288,7 +288,9 @@ fun FitnessApp(
             }
 
             AppScreen.Workout -> {
-                WorkoutScreen()
+                WorkoutScreen(
+                    modifier = Modifier.padding(padding)
+                )
             }
 
             AppScreen.Nutrition -> {

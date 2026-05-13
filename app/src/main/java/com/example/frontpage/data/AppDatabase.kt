@@ -19,6 +19,8 @@ import com.example.frontpage.food.model.FoodItem
 import com.example.frontpage.theme.data.PageThemeDao
 import com.example.frontpage.theme.model.PageThemeEntry
 import com.example.frontpage.theme.model.PageThemePreferenceEntry
+import com.example.frontpage.workout.data.WorkoutDao
+import com.example.frontpage.workout.model.WorkoutEntry
 
 @Database(
     entities = [
@@ -27,9 +29,10 @@ import com.example.frontpage.theme.model.PageThemePreferenceEntry
         User::class,
         FoodItem::class,
         PageThemePreferenceEntry::class,
-        PageThemeEntry::class
+        PageThemeEntry::class,
+        WorkoutEntry::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -37,6 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun moodDao(): MoodDao
     abstract fun sleepDao(): SleepDao
     abstract fun userDao(): UserDao
+    abstract fun workoutDao(): WorkoutDao
 
     abstract fun foodDao(): FoodDao
     abstract fun pageThemeDao(): PageThemeDao
@@ -64,7 +68,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .openHelperFactory(factory)
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .fallbackToDestructiveMigration()
                     .build()
 
@@ -163,66 +167,68 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-                db.execSQL(
-                    """
-                    INSERT OR IGNORE INTO page_theme_entries (
-                        id,
-                        userId,
-                        target,
-                        displayName,
-                        description,
-                        screenBackground,
-                        onBackground,
-                        onBackgroundMuted,
-                        cardContainer,
-                        onCard,
-                        onCardMuted,
-                        primary,
-                        primaryEnd,
-                        onPrimary,
-                        primarySoft,
-                        progressTrack,
-                        positive,
-                        warning,
-                        negative,
-                        outline,
-                        headerGradientStart,
-                        headerGradientEnd,
-                        onHeader,
-                        layoutStyle,
-                        createdAtMillis,
-                        updatedAtMillis
+                if (db.tableExists("page_theme_custom_presets")) {
+                    db.execSQL(
+                        """
+                        INSERT OR IGNORE INTO page_theme_entries (
+                            id,
+                            userId,
+                            target,
+                            displayName,
+                            description,
+                            screenBackground,
+                            onBackground,
+                            onBackgroundMuted,
+                            cardContainer,
+                            onCard,
+                            onCardMuted,
+                            primary,
+                            primaryEnd,
+                            onPrimary,
+                            primarySoft,
+                            progressTrack,
+                            positive,
+                            warning,
+                            negative,
+                            outline,
+                            headerGradientStart,
+                            headerGradientEnd,
+                            onHeader,
+                            layoutStyle,
+                            createdAtMillis,
+                            updatedAtMillis
+                        )
+                        SELECT
+                            id,
+                            userId,
+                            target,
+                            displayName,
+                            description,
+                            screenBackground,
+                            onBackground,
+                            onBackgroundMuted,
+                            cardContainer,
+                            onCard,
+                            onCardMuted,
+                            primary,
+                            primaryEnd,
+                            onPrimary,
+                            primarySoft,
+                            progressTrack,
+                            positive,
+                            warning,
+                            negative,
+                            outline,
+                            headerGradientStart,
+                            headerGradientEnd,
+                            onHeader,
+                            layoutStyle,
+                            createdAtMillis,
+                            updatedAtMillis
+                        FROM page_theme_custom_presets
+                        """.trimIndent()
                     )
-                    SELECT
-                        id,
-                        userId,
-                        target,
-                        displayName,
-                        description,
-                        screenBackground,
-                        onBackground,
-                        onBackgroundMuted,
-                        cardContainer,
-                        onCard,
-                        onCardMuted,
-                        primary,
-                        primaryEnd,
-                        onPrimary,
-                        primarySoft,
-                        progressTrack,
-                        positive,
-                        warning,
-                        negative,
-                        outline,
-                        headerGradientStart,
-                        headerGradientEnd,
-                        onHeader,
-                        layoutStyle,
-                        createdAtMillis,
-                        updatedAtMillis
-                    FROM page_theme_custom_presets
-                    """.trimIndent()
-                )
+                }
                 db.execSQL(
                     """
                     CREATE INDEX IF NOT EXISTS index_page_theme_entries_userId_target
@@ -230,6 +236,46 @@ abstract class AppDatabase : RoomDatabase() {
                     """.trimIndent()
                 )
             }
+        }
+
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS food_items (
+                        id INTEGER NOT NULL,
+                        userId INTEGER NOT NULL,
+                        mealName TEXT NOT NULL,
+                        calories INTEGER,
+                        dateTime INTEGER NOT NULL,
+                        protein INTEGER NOT NULL,
+                        carbs INTEGER NOT NULL,
+                        fat INTEGER NOT NULL,
+                        mealType TEXT NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS workout_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userId INTEGER NOT NULL,
+                        dateMillis INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        durationMinutes INTEGER NOT NULL,
+                        exercisesText TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private fun SupportSQLiteDatabase.tableExists(tableName: String): Boolean {
+            return query(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                arrayOf(tableName)
+            ).use { cursor -> cursor.moveToFirst() }
         }
     }
 }
