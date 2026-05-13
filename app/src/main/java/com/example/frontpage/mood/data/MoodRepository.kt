@@ -33,6 +33,22 @@ class MoodRepository(
         )
     }
 
+    suspend fun deleteMoods(
+        userId: Long,
+        moodIds: List<Int>
+    ) {
+        if (moodIds.isEmpty()) return
+
+        moodDao.deleteMoodsForUser(
+            ids = moodIds,
+            userId = userId
+        )
+    }
+
+    suspend fun clearAllMoods(userId: Long) {
+        moodDao.deleteAllMoodEntriesForUser(userId)
+    }
+
     suspend fun getAllMoods(userId: Long): List<MoodEntry> {
         return moodDao.getAllMoodEntriesForUser(userId)
     }

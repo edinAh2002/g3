@@ -9,20 +9,6 @@ enum class MoodFeelingFilter(val label: String, val moodValue: Int?) {
     Great("Great", 5)
 }
 
-enum class MoodDateFilter(val label: String) {
-    All("All dates"),
-    Today("Today"),
-    ThisWeek("This week")
-}
-
 data class MoodLogFilterState(
-    val feelingFilter: MoodFeelingFilter = MoodFeelingFilter.All,
-    val dateFilter: MoodDateFilter = MoodDateFilter.All
-)
-
-data class MoodTrackingUiState(
-    val selectedMood: Int = 0,
-    val note: String = "",
-    val isSaving: Boolean = false,
-    val errorMessage: String? = null
+    val feelingFilter: MoodFeelingFilter = MoodFeelingFilter.All
 )

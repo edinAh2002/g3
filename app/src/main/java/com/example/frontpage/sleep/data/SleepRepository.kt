@@ -5,16 +5,16 @@ import kotlinx.coroutines.flow.Flow
 
 class SleepRepository(
     private val sleepDao: SleepDao
-) {
-    fun getSleepLogsForUser(userId: Long): Flow<List<SleepEntry>> {
+) : SleepLogDataSource {
+    override fun getSleepLogsForUser(userId: Long): Flow<List<SleepEntry>> {
         return sleepDao.getSleepLogsForUser(userId)
     }
 
-    fun getLatestSleepForUser(userId: Long): Flow<SleepEntry?> {
+    override fun getLatestSleepForUser(userId: Long): Flow<SleepEntry?> {
         return sleepDao.getLatestSleepForUser(userId)
     }
 
-    suspend fun addSleep(
+    override suspend fun addSleep(
         userId: Long,
         entry: SleepEntry
     ) {
@@ -23,7 +23,7 @@ class SleepRepository(
         )
     }
 
-    suspend fun updateSleep(
+    override suspend fun updateSleep(
         userId: Long,
         entry: SleepEntry
     ) {
@@ -32,7 +32,7 @@ class SleepRepository(
         )
     }
 
-    suspend fun deleteSleep(
+    override suspend fun deleteSleep(
         userId: Long,
         id: Long
     ) {
@@ -42,7 +42,7 @@ class SleepRepository(
         )
     }
 
-    suspend fun clearAllLogs(userId: Long) {
+    override suspend fun clearAllLogs(userId: Long) {
         sleepDao.clearSleepLogsForUser(userId)
     }
 }

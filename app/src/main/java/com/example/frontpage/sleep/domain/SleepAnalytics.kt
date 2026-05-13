@@ -42,6 +42,8 @@ data class SleepTagInsight(
     val description: String
 )
 
+object SleepAnalytics {
+
 fun buildWeeklySleepChartData(
     sleepLogs: List<SleepEntry>
 ): List<WeeklySleepChartItem> {
@@ -133,9 +135,19 @@ fun buildSleepGoalBalance(
     sleepLogs: List<SleepEntry>,
     goalMinutes: Int
 ): SleepGoalBalance {
+    return buildSleepGoalBalance(
+        sleepLogs = sleepLogs,
+        goalMinutesForDate = { goalMinutes }
+    )
+}
+
+fun buildSleepGoalBalance(
+    sleepLogs: List<SleepEntry>,
+    goalMinutesForDate: (Long) -> Int
+): SleepGoalBalance {
     val balanceMinutes = calculateGoalBalanceMinutes(
         sleepLogs = sleepLogs,
-        goalMinutes = goalMinutes
+        goalMinutesForDate = goalMinutesForDate
     )
 
     return SleepGoalBalance(
@@ -159,10 +171,23 @@ fun calculateGoalBalanceMinutes(
     sleepLogs: List<SleepEntry>,
     goalMinutes: Int
 ): Int {
-    if (goalMinutes <= 0) return 0
+    return calculateGoalBalanceMinutes(
+        sleepLogs = sleepLogs,
+        goalMinutesForDate = { goalMinutes }
+    )
+}
 
+fun calculateGoalBalanceMinutes(
+    sleepLogs: List<SleepEntry>,
+    goalMinutesForDate: (Long) -> Int
+): Int {
     return sleepLogs.sumOf { entry ->
-        entry.durationMinutes - goalMinutes
+        val goalMinutes = goalMinutesForDate(entry.dateMillis)
+        if (goalMinutes <= 0) {
+            0
+        } else {
+            entry.durationMinutes - goalMinutes
+        }
     }
 }
 
@@ -170,11 +195,21 @@ fun buildSleepStreakSummary(
     sleepLogs: List<SleepEntry>,
     goalMinutes: Int
 ): SleepStreakSummary {
+    return buildSleepStreakSummary(
+        sleepLogs = sleepLogs,
+        goalMinutesForDate = { goalMinutes }
+    )
+}
+
+fun buildSleepStreakSummary(
+    sleepLogs: List<SleepEntry>,
+    goalMinutesForDate: (Long) -> Int
+): SleepStreakSummary {
     return SleepStreakSummary(
         loggedDayStreak = calculateLoggedDayStreak(sleepLogs),
         nearGoalStreak = calculateNearGoalStreak(
             sleepLogs = sleepLogs,
-            goalMinutes = goalMinutes
+            goalMinutesForDate = goalMinutesForDate
         )
     )
 }
@@ -192,13 +227,23 @@ fun calculateNearGoalStreak(
     sleepLogs: List<SleepEntry>,
     goalMinutes: Int
 ): Int {
-    if (goalMinutes <= 0) return 0
+    return calculateNearGoalStreak(
+        sleepLogs = sleepLogs,
+        goalMinutesForDate = { goalMinutes }
+    )
+}
 
+fun calculateNearGoalStreak(
+    sleepLogs: List<SleepEntry>,
+    goalMinutesForDate: (Long) -> Int
+): Int {
     val nearGoalDayStarts = sleepLogs
         .groupBy { startOfLocalDayMillis(it.dateMillis) }
         .filterValues { entries ->
             entries.any { entry ->
-                abs(entry.durationMinutes - goalMinutes) <= NEAR_GOAL_TOLERANCE_MINUTES
+                val goalMinutes = goalMinutesForDate(entry.dateMillis)
+                goalMinutes > 0 &&
+                        abs(entry.durationMinutes - goalMinutes) <= NEAR_GOAL_TOLERANCE_MINUTES
             }
         }
         .keys
@@ -293,7 +338,7 @@ fun buildSleepTagInsight(
     if (taggedSleepLogs.isEmpty()) return null
 
     val topTag = taggedSleepLogs
-        .flatMap { SleepTag.fromStorage(it.tags) }
+        .flatMap { SleepTag.optionsFromStorage(it.tags) }
         .groupingBy { it }
         .eachCount()
         .maxByOrNull { it.value }
@@ -380,4 +425,5 @@ private fun calculateCorrelation(
     } else {
         numerator / denominator
     }
+}
 }

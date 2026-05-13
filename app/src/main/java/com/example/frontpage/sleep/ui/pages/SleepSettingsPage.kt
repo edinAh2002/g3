@@ -2,36 +2,87 @@ package com.example.frontpage.sleep.ui.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.model.HealthConnectAvailability
+import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepHealthConnectState
+import com.example.frontpage.sleep.model.SleepWeekday
+import com.example.frontpage.sleep.model.WeekdaySleepSettings
+import com.example.frontpage.sleep.ui.components.SettingsSummaryCard
+import com.example.frontpage.sleep.ui.components.healthConnectSummary
+import com.example.frontpage.sleep.ui.components.settingsOrDefaults
+import com.example.frontpage.sleep.ui.dialogs.CustomTagsDialog
+import com.example.frontpage.sleep.ui.dialogs.DeleteCustomTagDialog
+import com.example.frontpage.sleep.ui.dialogs.EditGoalDialog
+import com.example.frontpage.sleep.ui.dialogs.EditScheduleTargetsDialog
+import com.example.frontpage.sleep.ui.dialogs.HealthConnectSettingsDialog
+import com.example.frontpage.sleep.ui.dialogs.SleepGoalsDialog
+import com.example.frontpage.sleep.ui.dialogs.SleepHistorySettingsDialog
+import com.example.frontpage.sleep.ui.dialogs.SleepScheduleTargetsDialog
+import com.example.frontpage.theme.domain.PageThemeCatalog
+import com.example.frontpage.theme.model.PageThemeCustomPresetDraft
+import com.example.frontpage.theme.model.PageThemePreset
+import com.example.frontpage.theme.model.PageThemePresetId
+import com.example.frontpage.theme.model.PageThemeTargetKey
+import com.example.frontpage.theme.ui.dialogs.PageThemeDialog
+
+private enum class SleepSettingsDialog {
+    Goals,
+    ScheduleTargets,
+    CustomTags,
+    SleepHistory,
+    Theme,
+    HealthConnect
+}
 
 @Composable
 fun SleepSettingsPage(
     goalMinutes: Int,
+    weekdaySettings: List<WeekdaySleepSettings>,
+    customTags: List<SleepCustomTag>,
     totalLogs: Int,
     healthConnectState: SleepHealthConnectState,
-    onEditGoalClick: () -> Unit,
+    selectedThemePresetId: PageThemePresetId,
+    customThemePresets: List<PageThemePreset>,
+    onUpdateAllWeekdayGoals: (Int) -> Unit,
     onClearSleepHistoryClick: () -> Unit,
+    onUpdateWeekdayGoal: (SleepWeekday, Int) -> Unit,
+    onUpdateWeekdayScheduleTargets: (SleepWeekday, Int, Int) -> Unit,
+    onUpdateAllWeekdayScheduleTargets: (Int, Int) -> Unit,
+    onAddCustomTag: (String) -> Unit,
+    onDeleteCustomTag: (String) -> Unit,
+    onUpdateThemePreset: (PageThemePresetId) -> Unit,
+    onCreateCustomTheme: (PageThemeCustomPresetDraft) -> Unit,
     onRequestHealthConnectAccessClick: () -> Unit,
     onImportHealthConnectSleepClick: () -> Unit
 ) {
-    var showClearConfirmDialog by remember { mutableStateOf(false) }
+    val themeCatalog = PageThemeCatalog.Default
+    val settings = settingsOrDefaults(weekdaySettings)
+    val todaySetting = settings.firstOrNull { setting ->
+        setting.weekday == SleepWeekday.fromDateMillis(System.currentTimeMillis())
+    } ?: settings.first()
+    val selectedThemeDescriptor = customThemePresets
+        .firstOrNull { preset -> preset.descriptor.id == selectedThemePresetId }
+        ?.descriptor
+        ?: themeCatalog.descriptorFor(
+            target = PageThemeTargetKey.Sleep,
+            presetId = selectedThemePresetId
+        )
+
+    var activeDialog by remember { mutableStateOf<SleepSettingsDialog?>(null) }
+    var editingGoal by remember { mutableStateOf<WeekdaySleepSettings?>(null) }
+    var editingAllGoals by remember { mutableStateOf(false) }
+    var editingTargets by remember { mutableStateOf<WeekdaySleepSettings?>(null) }
+    var editingAllTargets by remember { mutableStateOf(false) }
+    var deletingCustomTag by remember { mutableStateOf<SleepCustomTag?>(null) }
+    var newCustomTagLabel by remember { mutableStateOf("") }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -41,172 +92,225 @@ fun SleepSettingsPage(
             style = MaterialTheme.typography.titleMedium
         )
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Sleep Goal",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Text(
-                    text = SleepCalculator.formatDuration(goalMinutes),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Text(
-                    text = "This goal is used for your progress bar, score, and feedback cards.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                OutlinedButton(
-                    onClick = onEditGoalClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Edit Sleep Goal")
-                }
+        SettingsSummaryCard(
+            title = "Sleep Goals",
+            value = "Today: ${SleepCalculator.formatDuration(todaySetting.goalMinutes)}",
+            description = "Set different sleep goals for each wake day.",
+            onClick = {
+                activeDialog = SleepSettingsDialog.Goals
             }
-        }
+        )
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Sleep History",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Text(
-                    text = "$totalLogs saved logs",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Text(
-                    text = "Clearing history removes sleep logs for the current user only.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                OutlinedButton(
-                    onClick = {
-                        showClearConfirmDialog = true
-                    },
-                    enabled = totalLogs > 0,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Clear Sleep History")
-                }
+        SettingsSummaryCard(
+            title = "Sleep Schedule Targets",
+            value = "Today: ${SleepCalculator.formatClockMinutes(todaySetting.bedtimeMinutes)} to ${SleepCalculator.formatClockMinutes(todaySetting.wakeMinutes)}",
+            description = "Set bedtime and wake-up targets for each day.",
+            onClick = {
+                activeDialog = SleepSettingsDialog.ScheduleTargets
             }
-        }
+        )
 
-        Card(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Wearables & Health Connect",
-                    style = MaterialTheme.typography.titleMedium
-                )
-
-                Text(
-                    text = healthConnectState.availability.label,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Text(
-                    text = when {
-                        healthConnectState.availability == HealthConnectAvailability.Unavailable ->
-                            "Health Connect is not available on this device."
-
-                        healthConnectState.availability == HealthConnectAvailability.ProviderUpdateRequired ->
-                            "Install or update Health Connect, then come back to import wearable sleep."
-
-                        healthConnectState.hasSleepPermission ->
-                            "Sleep read access is granted."
-
-                        else ->
-                            "Grant sleep read access to import wearable sessions."
-                    },
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                OutlinedButton(
-                    onClick = onRequestHealthConnectAccessClick,
-                    enabled = healthConnectState.canRequestPermission,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (healthConnectState.hasSleepPermission) {
-                            "Review Access"
-                        } else {
-                            "Grant Sleep Access"
-                        }
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = onImportHealthConnectSleepClick,
-                    enabled = healthConnectState.canImport,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        if (healthConnectState.isImporting) {
-                            "Importing..."
-                        } else {
-                            "Import Last 30 Days"
-                        }
-                    )
-                }
-
-                healthConnectState.lastImportMessage?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+        SettingsSummaryCard(
+            title = "Custom Tags",
+            value = "${customTags.size} custom tags",
+            description = "Create tags that appear when logging sleep.",
+            onClick = {
+                activeDialog = SleepSettingsDialog.CustomTags
             }
-        }
+        )
+
+        SettingsSummaryCard(
+            title = "Sleep History",
+            value = "$totalLogs saved logs",
+            description = "Clear sleep logs for the current user.",
+            onClick = {
+                activeDialog = SleepSettingsDialog.SleepHistory
+            }
+        )
+
+        SettingsSummaryCard(
+            title = "Sleep Theme",
+            value = selectedThemeDescriptor.displayName,
+            description = selectedThemeDescriptor.description,
+            onClick = {
+                activeDialog = SleepSettingsDialog.Theme
+            }
+        )
+
+        SettingsSummaryCard(
+            title = "Wearables & Health Connect",
+            value = healthConnectState.availability.label,
+            description = healthConnectSummary(healthConnectState),
+            onClick = {
+                activeDialog = SleepSettingsDialog.HealthConnect
+            }
+        )
     }
 
-    if (showClearConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showClearConfirmDialog = false
-            },
-            title = {
-                Text("Clear sleep history?")
-            },
-            text = {
-                Text("This will delete all sleep logs for the current user. Your sleep goal will stay saved.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onClearSleepHistoryClick()
-                        showClearConfirmDialog = false
-                    }
-                ) {
-                    Text("Clear")
+    when (activeDialog) {
+        SleepSettingsDialog.Goals -> {
+            SleepGoalsDialog(
+                todayGoalMinutes = todaySetting.goalMinutes,
+                weekdaySettings = settings,
+                onDismiss = {
+                    activeDialog = null
+                },
+                onEditGoal = { setting ->
+                    editingGoal = setting
+                },
+                onEditAllGoals = {
+                    editingAllGoals = true
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showClearConfirmDialog = false
-                    }
-                ) {
-                    Text("Cancel")
+            )
+        }
+
+        SleepSettingsDialog.ScheduleTargets -> {
+            SleepScheduleTargetsDialog(
+                weekdaySettings = settings,
+                onDismiss = {
+                    activeDialog = null
+                },
+                onEditTargets = { setting ->
+                    editingTargets = setting
+                },
+                onEditAllTargets = {
+                    editingAllTargets = true
                 }
+            )
+        }
+
+        SleepSettingsDialog.CustomTags -> {
+            CustomTagsDialog(
+                customTags = customTags,
+                newCustomTagLabel = newCustomTagLabel,
+                onNewCustomTagLabelChange = { label ->
+                    newCustomTagLabel = label
+                },
+                onAddCustomTag = {
+                    onAddCustomTag(newCustomTagLabel)
+                    newCustomTagLabel = ""
+                },
+                onDeleteCustomTag = { tag ->
+                    deletingCustomTag = tag
+                },
+                onDismiss = {
+                    activeDialog = null
+                }
+            )
+        }
+
+        SleepSettingsDialog.SleepHistory -> {
+            SleepHistorySettingsDialog(
+                totalLogs = totalLogs,
+                onClearSleepHistoryClick = onClearSleepHistoryClick,
+                onDismiss = {
+                    activeDialog = null
+                }
+            )
+        }
+
+        SleepSettingsDialog.Theme -> {
+            PageThemeDialog(
+                target = PageThemeTargetKey.Sleep,
+                catalog = themeCatalog,
+                selectedThemePresetId = selectedThemePresetId,
+                customThemePresets = customThemePresets,
+                onSelectThemePreset = onUpdateThemePreset,
+                onCreateCustomTheme = onCreateCustomTheme,
+                onDismiss = {
+                    activeDialog = null
+                }
+            )
+        }
+
+        SleepSettingsDialog.HealthConnect -> {
+            HealthConnectSettingsDialog(
+                healthConnectState = healthConnectState,
+                onRequestHealthConnectAccessClick = onRequestHealthConnectAccessClick,
+                onImportHealthConnectSleepClick = onImportHealthConnectSleepClick,
+                onDismiss = {
+                    activeDialog = null
+                }
+            )
+        }
+
+        null -> Unit
+    }
+
+    editingGoal?.let { setting ->
+        EditGoalDialog(
+            title = "${setting.weekday.label} Goal",
+            initialGoalMinutes = setting.goalMinutes,
+            onDismiss = {
+                editingGoal = null
+            },
+            onSave = { goalMinutes ->
+                onUpdateWeekdayGoal(setting.weekday, goalMinutes)
+                editingGoal = null
+            }
+        )
+    }
+
+    if (editingAllGoals) {
+        EditGoalDialog(
+            title = "All Days Goal",
+            initialGoalMinutes = todaySetting.goalMinutes,
+            onDismiss = {
+                editingAllGoals = false
+            },
+            onSave = { goalMinutes ->
+                onUpdateAllWeekdayGoals(goalMinutes)
+                editingAllGoals = false
+            }
+        )
+    }
+
+    editingTargets?.let { setting ->
+        EditScheduleTargetsDialog(
+            title = "${setting.weekday.label} Targets",
+            initialBedtimeMinutes = setting.bedtimeMinutes,
+            initialWakeMinutes = setting.wakeMinutes,
+            onDismiss = {
+                editingTargets = null
+            },
+            onSave = { bedtimeMinutes, wakeMinutes ->
+                onUpdateWeekdayScheduleTargets(
+                    setting.weekday,
+                    bedtimeMinutes,
+                    wakeMinutes
+                )
+                editingTargets = null
+            }
+        )
+    }
+
+    if (editingAllTargets) {
+        EditScheduleTargetsDialog(
+            title = "All Days Targets",
+            initialBedtimeMinutes = todaySetting.bedtimeMinutes,
+            initialWakeMinutes = todaySetting.wakeMinutes,
+            onDismiss = {
+                editingAllTargets = false
+            },
+            onSave = { bedtimeMinutes, wakeMinutes ->
+                onUpdateAllWeekdayScheduleTargets(
+                    bedtimeMinutes,
+                    wakeMinutes
+                )
+                editingAllTargets = false
+            }
+        )
+    }
+
+    deletingCustomTag?.let { tag ->
+        DeleteCustomTagDialog(
+            tag = tag,
+            onDismiss = {
+                deletingCustomTag = null
+            },
+            onConfirmDelete = {
+                onDeleteCustomTag(tag.id)
+                deletingCustomTag = null
             }
         )
     }

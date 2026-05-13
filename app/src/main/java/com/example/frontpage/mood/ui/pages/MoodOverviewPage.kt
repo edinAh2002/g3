@@ -2,88 +2,147 @@ package com.example.frontpage.mood.ui.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.mood.domain.MoodLabelUtils
-import com.example.frontpage.mood.domain.MoodStatsCalculator
+import com.example.frontpage.mood.domain.MoodMomentumSummary
+import com.example.frontpage.mood.domain.MoodScoreSummary
+import com.example.frontpage.mood.domain.MoodStreakSummary
 import com.example.frontpage.mood.model.MoodEntry
-import com.example.frontpage.mood.ui.components.MoodStatCard
+import com.example.frontpage.mood.model.MoodScalePreset
+import com.example.frontpage.mood.model.WeeklyMoodChartItem
+import com.example.frontpage.mood.ui.components.LatestMoodCard
+import com.example.frontpage.mood.ui.components.MoodMetricTile
+import com.example.frontpage.mood.ui.components.MoodMomentumCard
+import com.example.frontpage.mood.ui.components.MoodScoreCard
+import com.example.frontpage.mood.ui.components.MoodSectionHeader
+import com.example.frontpage.mood.ui.components.WeeklyMoodChart
 
 @Composable
 fun MoodOverviewPage(
-    allMoodEntries: List<MoodEntry>,
     latestMood: MoodEntry?,
     averageMood: Double?,
+    todayAverageMood: Double?,
+    bestMood: MoodEntry?,
+    lowestMood: MoodEntry?,
+    totalLogs: Int,
+    weeklyChartData: List<WeeklyMoodChartItem>,
+    moodScoreSummary: MoodScoreSummary?,
+    moodMomentumSummary: MoodMomentumSummary,
+    streakSummary: MoodStreakSummary,
+    scalePreset: MoodScalePreset,
     onLogMoodClick: () -> Unit,
-    onViewHistoryClick: () -> Unit,
-    onViewInsightsClick: () -> Unit
+    onViewScaleClick: () -> Unit
 ) {
-    val todayAverageMood = MoodStatsCalculator.getTodayAverageMood(allMoodEntries)
-
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         LatestMoodCard(
-            latestMood = latestMood
+            latestMood = latestMood,
+            scalePreset = scalePreset,
+            onLogMoodClick = onLogMoodClick,
+            onViewScaleClick = onViewScaleClick
         )
 
-        Button(
-            onClick = onLogMoodClick,
-            modifier = Modifier.fillMaxWidth()
+        MoodSectionHeader(
+            title = "This Week",
+            subtitle = "Score and momentum use your recent mood logs."
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
         ) {
-            Text("Log Mood")
+            MoodScoreCard(
+                scoreSummary = moodScoreSummary,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+
+            MoodMomentumCard(
+                moodMomentumSummary = moodMomentumSummary,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
         }
 
-        Text(
-            text = "Mood Statistics",
-            style = MaterialTheme.typography.titleMedium
+        MoodSectionHeader(
+            title = "Key Numbers",
+            subtitle = "A quick scan of your mood log."
         )
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            MoodStatCard(
-                title = "Today Avg",
-                value = todayAverageMood?.let {
-                    "${String.format("%.1f", it)} / 5"
-                } ?: "No data",
+            MoodMetricTile(
+                title = "Average",
+                value = MoodLabelUtils.formatMoodAverage(averageMood),
                 modifier = Modifier.weight(1f)
             )
 
-            MoodStatCard(
-                title = "Overall Avg",
-                value = averageMood?.let {
-                    "${String.format("%.1f", it)} / 5"
-                } ?: "No data",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            MoodStatCard(
+            MoodMetricTile(
                 title = "Logs",
-                value = allMoodEntries.size.toString(),
+                value = totalLogs.toString(),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            MoodMetricTile(
+                title = "Logged Streak",
+                value = "${streakSummary.loggedDayStreak}d",
                 modifier = Modifier.weight(1f)
             )
 
-            MoodStatCard(
+            MoodMetricTile(
+                title = "Positive Streak",
+                value = "${streakSummary.positiveMoodStreak}d",
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        MoodSectionHeader(
+            title = "Last 7 Days",
+            subtitle = "Each bar shows average mood by day."
+        )
+
+        WeeklyMoodChart(
+            chartData = weeklyChartData
+        )
+
+        MoodSectionHeader(
+            title = "Records",
+            subtitle = "Your highest and lowest saved mood logs."
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            MoodMetricTile(
+                title = "Today Avg",
+                value = MoodLabelUtils.formatMoodAverage(todayAverageMood),
+                modifier = Modifier.weight(1f)
+            )
+
+            MoodMetricTile(
                 title = "Best",
-                value = MoodStatsCalculator.getBestMood(allMoodEntries)?.let {
-                    MoodLabelUtils.getMoodLabel(it.moodValue)
+                value = bestMood?.let { entry ->
+                    MoodLabelUtils.getMoodLabel(entry.moodValue, scalePreset)
                 } ?: "No data",
                 modifier = Modifier.weight(1f)
             )
@@ -93,61 +152,21 @@ fun MoodOverviewPage(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            OutlinedButton(
-                onClick = onViewHistoryClick,
+            MoodMetricTile(
+                title = "Lowest",
+                value = lowestMood?.let { entry ->
+                    MoodLabelUtils.getMoodLabel(entry.moodValue, scalePreset)
+                } ?: "No data",
                 modifier = Modifier.weight(1f)
-            ) {
-                Text("View History")
-            }
+            )
 
-            OutlinedButton(
-                onClick = onViewInsightsClick,
+            MoodMetricTile(
+                title = "Latest",
+                value = latestMood?.let { entry ->
+                    MoodLabelUtils.getMoodLabel(entry.moodValue, scalePreset)
+                } ?: "No data",
                 modifier = Modifier.weight(1f)
-            ) {
-                Text("View Insights")
-            }
-        }
-    }
-}
-
-@Composable
-private fun LatestMoodCard(
-    latestMood: MoodEntry?
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Latest Mood", style = MaterialTheme.typography.titleMedium)
-
-            if (latestMood == null) {
-                Text("No mood logged yet.")
-                Text("Tap Log Mood to add your first mood entry.")
-            } else {
-                Text(
-                    text = "${latestMood.date} at ${latestMood.time}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Text(
-                    text = MoodLabelUtils.getMoodLabel(latestMood.moodValue),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Text(
-                    text = if (latestMood.note.isBlank()) {
-                        "No note added."
-                    } else {
-                        latestMood.note
-                    }
-                )
-            }
+            )
         }
     }
 }

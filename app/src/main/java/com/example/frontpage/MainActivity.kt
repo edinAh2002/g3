@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.edit
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -29,15 +33,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.auth.AuthEvent
 import com.example.frontpage.auth.AuthViewModel
@@ -46,11 +51,19 @@ import com.example.frontpage.auth.ui.AuthStartScreen
 import com.example.frontpage.auth.ui.LoginScreen
 import com.example.frontpage.auth.ui.SignUpScreen
 import com.example.frontpage.data.AppDatabase
+import com.example.frontpage.food.NutritionViewModel
+import com.example.frontpage.food.model.FoodItem
+import com.example.frontpage.food.ui.FoodLoggingScreen
+import com.example.frontpage.food.ui.NutritionScreen
 import com.example.frontpage.mood.ui.MoodFeature
 import com.example.frontpage.sleep.ui.SleepFeature
 import com.example.frontpage.stepcounter.StepCounterScreen
+import com.example.frontpage.theme.model.PageThemeTargetKey
+import com.example.frontpage.theme.ui.components.pageThemeNavigationBarItemColors
+import com.example.frontpage.theme.ui.rememberPageThemeController
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+import java.time.LocalDate
 
 private enum class AppScreen {
     AuthStart,
@@ -95,8 +108,18 @@ fun FitnessApp(
 
     val authUiState by authViewModel.uiState.collectAsState()
 
+    val nutritionViewModel: NutritionViewModel = viewModel()
+    val foodItems by nutritionViewModel.foodItems.collectAsState()
+    val pageThemeController = rememberPageThemeController()
+    val currentUserId = authViewModel.getCurrentUserId()
+
     LaunchedEffect(Unit) {
         authViewModel.loadCurrentUser()
+    }
+
+    LaunchedEffect(currentUserId) {
+        pageThemeController.refreshForUser(currentUserId)
+        nutritionViewModel.refreshCurrentUser()
     }
 
     var selectedScreen by remember {
@@ -114,6 +137,7 @@ fun FitnessApp(
             when (event) {
                 AuthEvent.Authenticated -> {
                     authViewModel.loadCurrentUser()
+                    nutritionViewModel.refreshCurrentUser()
                     selectedScreen = AppScreen.Home
                 }
             }
@@ -122,12 +146,11 @@ fun FitnessApp(
 
     val isAuthScreen =
         selectedScreen == AppScreen.AuthStart ||
-                selectedScreen == AppScreen.Login ||
-                selectedScreen == AppScreen.SignUp
+            selectedScreen == AppScreen.Login ||
+            selectedScreen == AppScreen.SignUp
 
     val context = LocalContext.current
 
-    var foodItems by remember { mutableStateOf(listOf<FoodItem>()) }
     var showFoodLogging by remember { mutableStateOf(false) }
     val moodController = MoodFeature.rememberController()
     val sleepController = SleepFeature.rememberController()
@@ -140,48 +163,51 @@ fun FitnessApp(
                         selected = selectedScreen == AppScreen.Home,
                         onClick = { selectedScreen = AppScreen.Home },
                         label = { Text("Home") },
-                        icon = { Text("🏠") }
+                        icon = { Text("\uD83C\uDFE0") }
                     )
 
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Workout,
                         onClick = { selectedScreen = AppScreen.Workout },
                         label = { Text("Workout") },
-                        icon = { Text("🏃") }
+                        icon = { Text("\uD83C\uDFC3") }
                     )
 
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Steps,
                         onClick = { selectedScreen = AppScreen.Steps },
                         label = { Text("Steps") },
-                        icon = { Text("👣") }
+                        icon = { Text("\uD83D\uDC63") }
                     )
 
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Nutrition,
                         onClick = { selectedScreen = AppScreen.Nutrition },
                         label = { Text("Nutrition") },
-                        icon = { Text("🥗") }
+                        icon = { Text("\uD83E\uDD57") }
                     )
 
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Mood,
                         onClick = { selectedScreen = AppScreen.Mood },
                         label = { Text("Mood") },
-                        icon = { Text("🙂") }
+                        icon = { Text("\uD83D\uDE42") }
                     )
 
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Sleep,
                         onClick = { selectedScreen = AppScreen.Sleep },
                         label = { Text("Sleep") },
-                        icon = { Text("🌙") }
+                        icon = { Text("\uD83C\uDF19") },
+                        colors = pageThemeNavigationBarItemColors(
+                            controller = pageThemeController,
+                            target = PageThemeTargetKey.Sleep
+                        )
                     )
                 }
             }
         }
     ) { padding ->
-
         when (selectedScreen) {
             AppScreen.AuthStart -> {
                 AuthStartScreen(
@@ -245,15 +271,20 @@ fun FitnessApp(
                     context = context,
                     modifier = Modifier.padding(padding),
                     foodItems = foodItems,
-                    currentUsername = authUiState.currentUsername,
-                    currentUserId = authUiState.currentUserId,
-                    isGuest = authUiState.isGuest,
+                    currentUsername = authViewModel.getCurrentUsername(),
+                    currentUserId = currentUserId,
+                    isGuest = authViewModel.isCurrentUserGuest(),
                     onLogOutClick = {
                         authViewModel.logOut()
+                        nutritionViewModel.refreshCurrentUser()
+                        pageThemeController.refreshForUser(null)
                         selectedScreen = AppScreen.AuthStart
                     },
                     onSwitchAccountClick = {
                         authViewModel.logOut()
+                        authViewModel.resetForm()
+                        nutritionViewModel.refreshCurrentUser()
+                        pageThemeController.refreshForUser(null)
                         selectedScreen = AppScreen.AuthStart
                     },
                     onLogMealClick = { showFoodLogging = true },
@@ -262,13 +293,15 @@ fun FitnessApp(
                         sleepController.openLogDialog()
                     },
                     onLogMoodClick = {
-                        moodController.openTrackingDialog()
+                        moodController.openLogDialog()
                     }
                 )
             }
 
             AppScreen.Workout -> {
-                WorkoutScreen()
+                WorkoutScreen(
+                    modifier = Modifier.padding(padding)
+                )
             }
 
             AppScreen.Nutrition -> {
@@ -282,7 +315,7 @@ fun FitnessApp(
                         showFoodLogging = true
                     },
                     onDeleteFood = { foodToDelete ->
-                        foodItems = foodItems - foodToDelete
+                        nutritionViewModel.deleteFoodItem(foodToDelete.id)
                     }
                 )
             }
@@ -290,7 +323,8 @@ fun FitnessApp(
             AppScreen.Sleep -> {
                 SleepFeature.MainRoute(
                     modifier = Modifier.padding(padding),
-                    controller = sleepController
+                    controller = sleepController,
+                    themeController = pageThemeController
                 )
             }
 
@@ -312,7 +346,7 @@ fun FitnessApp(
             if (showFoodLogging) {
                 FoodLoggingScreen(
                     onAddFood = { newFood ->
-                        foodItems = foodItems + newFood
+                        nutritionViewModel.addFoodItem(newFood)
                     },
                     onClose = {
                         showFoodLogging = false
@@ -325,7 +359,8 @@ fun FitnessApp(
             )
 
             SleepFeature.DialogHost(
-                controller = sleepController
+                controller = sleepController,
+                themeController = pageThemeController
             )
         }
     }
@@ -356,6 +391,34 @@ fun HomeScreen(
         mutableStateOf(sharedPreferences.getString("hydration", "6 cups") ?: "6 cups")
     }
 
+    var streak by remember {
+        mutableIntStateOf(sharedPreferences.getInt("current_streak", 0))
+    }
+
+    LaunchedEffect(Unit) {
+        val today = LocalDate.now().toString()
+        val lastOpenDate = sharedPreferences.getString("last_open_date", null)
+        val nextStreakDate = lastOpenDate?.let { storedDate ->
+            runCatching {
+                LocalDate.parse(storedDate).plusDays(1).toString()
+            }.getOrNull()
+        }
+
+        val newStreak = when {
+            lastOpenDate == today -> streak
+            lastOpenDate == null -> 1
+            nextStreakDate == today -> streak + 1
+            else -> 1
+        }
+
+        streak = newStreak
+
+        sharedPreferences.edit {
+            putInt("current_streak", newStreak)
+            putString("last_open_date", today)
+        }
+    }
+
     var showSettings by remember { mutableStateOf(false) }
     var showMedicineWizard by remember { mutableStateOf(false) }
     var showReminderList by remember { mutableStateOf(false) }
@@ -363,7 +426,7 @@ fun HomeScreen(
     var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
 
     val calorieGoal = 2500
-    val totalCalories = foodItems.sumOf { it.calories }
+    val totalCalories = foodItems.sumOf { it.calories ?: 0 }
     val calorieDisplay = "$totalCalories / $calorieGoal"
 
     val caloriesCardColor = if (totalCalories > calorieGoal) {
@@ -388,13 +451,35 @@ fun HomeScreen(
                 Text("Let's crush your goals today!")
             }
 
-            Row {
-                IconButton(onClick = { showReminderList = true }) {
-                    Text("🔔")
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                IconButton(
+                    onClick = { showReminderList = true },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(15.dp)
+                        )
+                ) {
+                    Text(
+                        text = "\uD83D\uDD14",
+                        fontSize = 24.sp
+                    )
                 }
 
-                IconButton(onClick = { showSettings = true }) {
-                    Text("⚙️")
+                IconButton(
+                    onClick = { showSettings = true },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(15.dp)
+                        )
+                ) {
+                    Text(
+                        text = "\u2699\uFE0F",
+                        fontSize = 24.sp
+                    )
                 }
             }
         }
@@ -440,7 +525,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Current Streak")
-                Text("14 days!", style = MaterialTheme.typography.headlineMedium)
+                Text("$streak days!", style = MaterialTheme.typography.headlineMedium)
                 Text("Keep it up!")
             }
         }
@@ -576,10 +661,10 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        sharedPreferences.edit()
-                            .putString("workout", workout)
-                            .putString("hydration", hydration)
-                            .apply()
+                        sharedPreferences.edit {
+                            putString("workout", workout)
+                            putString("hydration", hydration)
+                        }
 
                         showSettings = false
                     }
