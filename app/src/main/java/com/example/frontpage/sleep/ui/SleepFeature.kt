@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDateUtils
+import com.example.frontpage.sleep.model.toSleepLogDraft
 import com.example.frontpage.sleep.ui.cards.SleepHomeSummaryCard
 import com.example.frontpage.sleep.ui.dialogs.SleepLogDialog
 import com.example.frontpage.theme.model.PageThemeTargetKey
@@ -49,6 +50,9 @@ object SleepFeature {
             },
             onEditSleepEntry = { entry ->
                 controller.openEditDialog(entry)
+            },
+            onReviewDetectedSleep = { candidate ->
+                controller.openDetectedSleepReview(candidate)
             }
         )
     }
@@ -74,6 +78,7 @@ object SleepFeature {
 
                 SleepLogDialog(
                     existingEntry = controller.editingEntry,
+                    initialDraft = controller.reviewingDetectionCandidate?.toSleepLogDraft(),
                     goalMinutes = goalMinutes,
                     weekdaySettings = weekdaySettings,
                     customTags = customTags,
@@ -82,6 +87,7 @@ object SleepFeature {
                     },
                     onSave = { draft ->
                         val editingEntry = controller.editingEntry
+                        val reviewingCandidate = controller.reviewingDetectionCandidate
                         val date = SleepDateUtils.formatHistoryDate(draft.wakeDateMillis)
 
                         if (editingEntry == null) {
@@ -91,6 +97,10 @@ object SleepFeature {
                                     date = date
                                 )
                             )
+
+                            if (reviewingCandidate != null) {
+                                viewModel.acceptDetectionCandidate(reviewingCandidate.id)
+                            }
                         } else {
                             viewModel.updateSleep(
                                 draft.applyTo(

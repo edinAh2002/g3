@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import com.example.frontpage.sleep.domain.SleepCalculator
 import com.example.frontpage.sleep.model.SleepCustomTag
+import com.example.frontpage.sleep.model.SleepDetectionSettings
 import com.example.frontpage.sleep.model.SleepHealthConnectState
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
@@ -24,6 +25,7 @@ import com.example.frontpage.sleep.ui.dialogs.EditGoalDialog
 import com.example.frontpage.sleep.ui.dialogs.EditScheduleTargetsDialog
 import com.example.frontpage.sleep.ui.dialogs.HealthConnectSettingsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepGoalsDialog
+import com.example.frontpage.sleep.ui.dialogs.SleepDetectionSettingsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepHistorySettingsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepScheduleTargetsDialog
 import com.example.frontpage.theme.domain.PageThemeCatalog
@@ -38,6 +40,7 @@ private enum class SleepSettingsDialog {
     ScheduleTargets,
     CustomTags,
     SleepHistory,
+    SleepDetection,
     Theme,
     HealthConnect
 }
@@ -49,6 +52,7 @@ fun SleepSettingsPage(
     customTags: List<SleepCustomTag>,
     totalLogs: Int,
     healthConnectState: SleepHealthConnectState,
+    sleepDetectionSettings: SleepDetectionSettings,
     selectedThemePresetId: PageThemePresetId,
     customThemePresets: List<PageThemePreset>,
     onUpdateAllWeekdayGoals: (Int) -> Unit,
@@ -60,6 +64,9 @@ fun SleepSettingsPage(
     onDeleteCustomTag: (String) -> Unit,
     onUpdateThemePreset: (PageThemePresetId) -> Unit,
     onCreateCustomTheme: (PageThemeCustomPresetDraft) -> Unit,
+    onUpdateCustomTheme: (PageThemePresetId, PageThemeCustomPresetDraft) -> Unit,
+    onDeleteCustomTheme: (PageThemePresetId) -> Unit,
+    onUpdateSleepDetectionSettings: (SleepDetectionSettings) -> Unit,
     onRequestHealthConnectAccessClick: () -> Unit,
     onImportHealthConnectSleepClick: () -> Unit
 ) {
@@ -125,6 +132,15 @@ fun SleepSettingsPage(
             description = "Clear sleep logs for the current user.",
             onClick = {
                 activeDialog = SleepSettingsDialog.SleepHistory
+            }
+        )
+
+        SettingsSummaryCard(
+            title = "Sleep Detection",
+            value = if (sleepDetectionSettings.enabled) "On" else "Off",
+            description = "Suggest logs from screen lock and alarm signals.",
+            onClick = {
+                activeDialog = SleepSettingsDialog.SleepDetection
             }
         )
 
@@ -209,6 +225,19 @@ fun SleepSettingsPage(
             )
         }
 
+        SleepSettingsDialog.SleepDetection -> {
+            SleepDetectionSettingsDialog(
+                settings = sleepDetectionSettings,
+                onDismiss = {
+                    activeDialog = null
+                },
+                onSave = { updatedSettings ->
+                    onUpdateSleepDetectionSettings(updatedSettings)
+                    activeDialog = null
+                }
+            )
+        }
+
         SleepSettingsDialog.Theme -> {
             PageThemeDialog(
                 target = PageThemeTargetKey.Sleep,
@@ -217,6 +246,8 @@ fun SleepSettingsPage(
                 customThemePresets = customThemePresets,
                 onSelectThemePreset = onUpdateThemePreset,
                 onCreateCustomTheme = onCreateCustomTheme,
+                onUpdateCustomTheme = onUpdateCustomTheme,
+                onDeleteCustomTheme = onDeleteCustomTheme,
                 onDismiss = {
                     activeDialog = null
                 }

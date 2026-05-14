@@ -42,6 +42,18 @@ class SleepRepository(
         )
     }
 
+    override suspend fun hasSleepLogForWakeDate(
+        userId: Long,
+        wakeDateStartMillis: Long,
+        wakeDateEndMillis: Long
+    ): Boolean {
+        return sleepDao.countSleepLogsForWakeDate(
+            userId = userId,
+            wakeDateStartMillis = wakeDateStartMillis,
+            wakeDateEndMillis = wakeDateEndMillis
+        ) > 0
+    }
+
     override suspend fun clearAllLogs(userId: Long) {
         sleepDao.clearSleepLogsForUser(userId)
     }

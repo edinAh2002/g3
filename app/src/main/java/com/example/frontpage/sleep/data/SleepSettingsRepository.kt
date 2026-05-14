@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepDefaults
+import com.example.frontpage.sleep.model.SleepDetectionSettings
 import com.example.frontpage.sleep.model.SleepPageKey
 import com.example.frontpage.sleep.model.SleepPageLayout
 import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
@@ -412,6 +413,64 @@ object SleepSettingsRepository {
         )
     }
 
+    fun getSleepDetectionSettings(
+        context: Context,
+        userId: Long?
+    ): SleepDetectionSettings {
+        if (userId == null) return SleepDetectionSettings()
+
+        val preferences = preferences(context)
+        return SleepDetectionSettings(
+            enabled = preferences.getBoolean(
+                SleepSettingsStorageKeys.detectionEnabled(userId),
+                false
+            ),
+            minimumSleepMinutes = preferences.getInt(
+                SleepSettingsStorageKeys.detectionMinimumMinutes(userId),
+                SleepDetectionSettings.DEFAULT_MINIMUM_SLEEP_MINUTES
+            ),
+            alarmMatchWindowMinutes = preferences.getInt(
+                SleepSettingsStorageKeys.detectionAlarmWindowMinutes(userId),
+                SleepDetectionSettings.DEFAULT_ALARM_MATCH_WINDOW_MINUTES
+            ),
+            interruptionToleranceMinutes = preferences.getInt(
+                SleepSettingsStorageKeys.detectionInterruptionMinutes(userId),
+                SleepDetectionSettings.DEFAULT_INTERRUPTION_TOLERANCE_MINUTES
+            )
+        ).normalized()
+    }
+
+    fun updateSleepDetectionSettings(
+        context: Context,
+        userId: Long?,
+        settings: SleepDetectionSettings
+    ): SleepDetectionSettings {
+        val normalizedSettings = settings.normalized()
+        if (userId != null) {
+            preferences(context)
+                .edit {
+                    putBoolean(
+                        SleepSettingsStorageKeys.detectionEnabled(userId),
+                        normalizedSettings.enabled
+                    )
+                    putInt(
+                        SleepSettingsStorageKeys.detectionMinimumMinutes(userId),
+                        normalizedSettings.minimumSleepMinutes
+                    )
+                    putInt(
+                        SleepSettingsStorageKeys.detectionAlarmWindowMinutes(userId),
+                        normalizedSettings.alarmMatchWindowMinutes
+                    )
+                    putInt(
+                        SleepSettingsStorageKeys.detectionInterruptionMinutes(userId),
+                        normalizedSettings.interruptionToleranceMinutes
+                    )
+                }
+        }
+
+        return normalizedSettings
+    }
+
     private fun getBedtimeMinutesForWeekday(
         context: Context,
         userId: Long?,
@@ -463,6 +522,14 @@ object SleepSettingsRepository {
     private fun normalizeClockMinutes(minutes: Int): Int {
         val minutesInDay = 24 * 60
         return ((minutes % minutesInDay) + minutesInDay) % minutesInDay
+    }
+
+    private fun SleepDetectionSettings.normalized(): SleepDetectionSettings {
+        return copy(
+            minimumSleepMinutes = minimumSleepMinutes.coerceIn(2 * 60, 12 * 60),
+            alarmMatchWindowMinutes = alarmMatchWindowMinutes.coerceIn(15, 180),
+            interruptionToleranceMinutes = interruptionToleranceMinutes.coerceIn(0, 90)
+        )
     }
 }
 

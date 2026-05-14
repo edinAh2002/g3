@@ -2,6 +2,7 @@ package com.example.frontpage.sleep.data
 
 import android.content.Context
 import com.example.frontpage.sleep.model.SleepCustomTag
+import com.example.frontpage.sleep.model.SleepDetectionSettings
 import com.example.frontpage.sleep.model.SleepPageKey
 import com.example.frontpage.sleep.model.SleepPageLayout
 import com.example.frontpage.sleep.model.SleepPageSectionId
@@ -83,6 +84,13 @@ interface SleepSettingsDataSource {
         pageKey: SleepPageKey,
         defaultSectionIds: List<SleepPageSectionId>
     ): SleepPageLayout
+
+    fun getSleepDetectionSettings(userId: Long?): SleepDetectionSettings
+
+    fun updateSleepDetectionSettings(
+        userId: Long?,
+        settings: SleepDetectionSettings
+    ): SleepDetectionSettings
 
 }
 
@@ -256,6 +264,24 @@ class SharedPreferencesSleepSettingsDataSource(
             userId = userId,
             pageKey = pageKey,
             defaultSectionIds = defaultSectionIds
+        )
+    }
+
+    override fun getSleepDetectionSettings(userId: Long?): SleepDetectionSettings {
+        return SleepSettingsRepository.getSleepDetectionSettings(
+            context = context,
+            userId = userId
+        )
+    }
+
+    override fun updateSleepDetectionSettings(
+        userId: Long?,
+        settings: SleepDetectionSettings
+    ): SleepDetectionSettings {
+        return SleepSettingsRepository.updateSleepDetectionSettings(
+            context = context,
+            userId = userId,
+            settings = settings
         )
     }
 

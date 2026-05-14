@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.data.MoodRepository
+import com.example.frontpage.sleep.data.SleepDetectionDataSource
+import com.example.frontpage.sleep.data.SleepDetectionRepository
+import com.example.frontpage.sleep.data.SleepDetectionService
 import com.example.frontpage.sleep.data.SharedPreferencesSleepSettingsDataSource
 import com.example.frontpage.sleep.data.SleepHealthDataSource
 import com.example.frontpage.sleep.data.SleepHealthConnectManager
@@ -19,6 +22,8 @@ import com.example.frontpage.sleep.domain.SleepGoalHistoryProtector
 import com.example.frontpage.sleep.domain.SleepPageLayoutManager
 import com.example.frontpage.sleep.model.SleepCustomTag
 import com.example.frontpage.sleep.model.SleepDefaults
+import com.example.frontpage.sleep.model.SleepDetectionCandidate
+import com.example.frontpage.sleep.model.SleepDetectionSettings
 import com.example.frontpage.sleep.model.SleepHealthConnectState
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepPageKey
@@ -33,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -42,6 +48,7 @@ class SleepViewModel(
 ) : AndroidViewModel(application) {
 
     private val repository: SleepLogDataSource
+    private val detectionRepository: SleepDetectionDataSource
     private val authRepository: AuthRepository
     private val sleepHealthDataSource: SleepHealthDataSource
     private val settingsDataSource: SleepSettingsDataSource
@@ -55,6 +62,7 @@ class SleepViewModel(
     private val currentUserId = MutableStateFlow<Long?>(null)
 
     val sleepLogs: StateFlow<List<SleepEntry>>
+    val pendingDetectionCandidate: StateFlow<SleepDetectionCandidate?>
 
     private val _goalMinutes = MutableStateFlow(SleepDefaults.SLEEP_GOAL_MINUTES)
     val goalMinutes: StateFlow<Int> = _goalMinutes
@@ -64,6 +72,9 @@ class SleepViewModel(
 
     private val _customTags = MutableStateFlow<List<SleepCustomTag>>(emptyList())
     val customTags: StateFlow<List<SleepCustomTag>> = _customTags
+
+    private val _sleepDetectionSettings = MutableStateFlow(SleepDetectionSettings())
+    val sleepDetectionSettings: StateFlow<SleepDetectionSettings> = _sleepDetectionSettings
 
     private val _pageLayouts = MutableStateFlow(SleepPageLayoutDefaults.defaultLayouts())
     val pageLayouts: StateFlow<Map<SleepPageKey, SleepPageLayout>> = _pageLayouts
@@ -82,6 +93,7 @@ class SleepViewModel(
         val database = AppDatabase.getDatabase(application)
 
         repository = SleepRepository(database.sleepDao())
+        detectionRepository = SleepDetectionRepository(database.sleepDetectionDao())
         val previewMoodRepository = MoodRepository(database.moodDao())
         settingsDataSource = SharedPreferencesSleepSettingsDataSource(appContext)
         sleepHealthDataSource = SleepHealthConnectManager(appContext)
@@ -121,6 +133,21 @@ class SleepViewModel(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyList()
+            )
+
+        pendingDetectionCandidate = currentUserId
+            .flatMapLatest { userId ->
+                if (userId == null) {
+                    flowOf(null)
+                } else {
+                    detectionRepository.observePendingCandidatesForUser(userId)
+                        .map { candidates -> candidates.firstOrNull() }
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = null
             )
     }
 
@@ -237,6 +264,20 @@ class SleepViewModel(
         _customTags.value = settingsDataSource.deleteCustomTag(
             userId = getCurrentUserIdOrRefresh(),
             tagId = tagId
+        )
+    }
+
+    fun updateSleepDetectionSettings(settings: SleepDetectionSettings) {
+        val userId = getCurrentUserIdOrRefresh()
+        val updatedSettings = settingsDataSource.updateSleepDetectionSettings(
+            userId = userId,
+            settings = settings
+        )
+
+        _sleepDetectionSettings.value = updatedSettings
+        SleepDetectionService.setEnabled(
+            context = appContext,
+            enabled = updatedSettings.enabled && userId != null
         )
     }
 
@@ -419,6 +460,28 @@ class SleepViewModel(
         }
     }
 
+    fun acceptDetectionCandidate(candidateId: Long) {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            detectionRepository.acceptCandidate(
+                userId = userId,
+                candidateId = candidateId
+            )
+        }
+    }
+
+    fun dismissDetectionCandidate(candidateId: Long) {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            detectionRepository.dismissCandidate(
+                userId = userId,
+                candidateId = candidateId
+            )
+        }
+    }
+
     fun clearAllLogs() {
         viewModelScope.launch {
             val userId = getCurrentUserIdOrRefresh() ?: return@launch
@@ -441,6 +504,10 @@ class SleepViewModel(
         )
 
         _customTags.value = settingsDataSource.getCustomTags(
+            userId = currentUserId.value
+        )
+
+        _sleepDetectionSettings.value = settingsDataSource.getSleepDetectionSettings(
             userId = currentUserId.value
         )
 

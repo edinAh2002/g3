@@ -1,5 +1,9 @@
 package com.example.frontpage.sleep.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,12 +20,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.health.connect.client.PermissionController
 import com.example.frontpage.mood.MoodViewModel
 import com.example.frontpage.sleep.SleepViewModel
 import com.example.frontpage.sleep.domain.SleepDashboardStateBuilder
+import com.example.frontpage.sleep.model.SleepDetectionCandidate
+import com.example.frontpage.sleep.model.SleepDetectionSettings
 import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.ui.components.SleepPageCustomizationPanel
@@ -43,6 +51,7 @@ fun SleepScreen(
     modifier: Modifier = Modifier,
     onLogSleepClick: () -> Unit,
     onEditSleepEntry: (SleepEntry) -> Unit,
+    onReviewDetectedSleep: (SleepDetectionCandidate) -> Unit,
     themeController: PageThemeController,
     viewModel: SleepViewModel = viewModel(),
     moodViewModel: MoodViewModel = viewModel()
@@ -55,6 +64,8 @@ fun SleepScreen(
     val goalMinutes by viewModel.goalMinutes.collectAsState()
     val weekdaySettings by viewModel.weekdaySettings.collectAsState()
     val customTags by viewModel.customTags.collectAsState()
+    val sleepDetectionSettings by viewModel.sleepDetectionSettings.collectAsState()
+    val pendingDetectionCandidate by viewModel.pendingDetectionCandidate.collectAsState()
     val pageLayouts by viewModel.pageLayouts.collectAsState()
     val themePreferences by themeController.preferences.collectAsState()
     val customThemePresets by themeController.customPresets.collectAsState()
@@ -65,11 +76,45 @@ fun SleepScreen(
     val healthConnectState by viewModel.healthConnectState.collectAsState()
     val moodEntries by moodViewModel.allMoodEntries.collectAsState()
     val dashboardStateBuilder = remember { SleepDashboardStateBuilder() }
+    val context = LocalContext.current
+    var pendingSleepDetectionSettings by remember {
+        mutableStateOf<SleepDetectionSettings?>(null)
+    }
 
     val healthConnectPermissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { grantedPermissions ->
         viewModel.onHealthConnectPermissionsChanged(grantedPermissions)
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val settings = pendingSleepDetectionSettings
+        pendingSleepDetectionSettings = null
+
+        if (settings != null) {
+            viewModel.updateSleepDetectionSettings(
+                if (granted) settings else settings.copy(enabled = false)
+            )
+        }
+    }
+
+    fun updateSleepDetectionSettings(settings: SleepDetectionSettings) {
+        val needsNotificationPermission =
+            settings.enabled &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsNotificationPermission) {
+            pendingSleepDetectionSettings = settings
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.updateSleepDetectionSettings(settings)
+        }
     }
 
     LaunchedEffect(moodViewModel) {
@@ -175,6 +220,11 @@ fun SleepScreen(
                             onLogSleepClick = onLogSleepClick,
                             onEditGoalClick = {
                                 showGoalDialog = true
+                            },
+                            pendingDetectionCandidate = pendingDetectionCandidate,
+                            onReviewDetectedSleep = onReviewDetectedSleep,
+                            onDismissDetectedSleep = { candidate ->
+                                viewModel.dismissDetectionCandidate(candidate.id)
                             }
                         )
                     }
@@ -230,6 +280,7 @@ fun SleepScreen(
                             customTags = customTags,
                             totalLogs = sleepLogs.size,
                             healthConnectState = healthConnectState,
+                            sleepDetectionSettings = sleepDetectionSettings,
                             selectedThemePresetId = themePresetId,
                             customThemePresets = themeController.presetsFor(
                                 target = PageThemeTargetKey.Sleep,
@@ -277,6 +328,22 @@ fun SleepScreen(
                                     target = PageThemeTargetKey.Sleep,
                                     draft = draft
                                 )
+                            },
+                            onUpdateCustomTheme = { presetId, draft ->
+                                themeController.updateCustomThemePreset(
+                                    target = PageThemeTargetKey.Sleep,
+                                    presetId = presetId,
+                                    draft = draft
+                                )
+                            },
+                            onDeleteCustomTheme = { presetId ->
+                                themeController.deleteCustomThemePreset(
+                                    target = PageThemeTargetKey.Sleep,
+                                    presetId = presetId
+                                )
+                            },
+                            onUpdateSleepDetectionSettings = { settings ->
+                                updateSleepDetectionSettings(settings)
                             },
                             onRequestHealthConnectAccessClick = {
                                 viewModel.onHealthConnectPermissionRequestStarted()

@@ -113,6 +113,84 @@ class PageThemeViewModel(
         }
     }
 
+    fun updateCustomThemePreset(
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId,
+        draft: PageThemeCustomPresetDraft
+    ) {
+        if (catalog.supportsBuiltInPreset(target, presetId)) return
+
+        val existingPresets = _customPresets.value[target].orEmpty()
+        val existingPreset = existingPresets.firstOrNull { preset ->
+            preset.descriptor.id == presetId
+        } ?: return
+
+        val updatedPreset = existingPreset.copy(
+            descriptor = existingPreset.descriptor.copy(
+                displayName = draft.displayName.trim().ifBlank {
+                    existingPreset.descriptor.displayName
+                },
+                description = draft.description.trim().ifBlank {
+                    existingPreset.descriptor.description
+                }
+            ),
+            colors = draft.colors,
+            layoutStyle = draft.layoutStyle
+        )
+
+        _customPresets.value = _customPresets.value + (
+            target to existingPresets.map { preset ->
+                if (preset.descriptor.id == presetId) updatedPreset else preset
+            }
+        )
+
+        viewModelScope.launch {
+            themeDataSource.updateCustomPreset(
+                userId = currentUserId,
+                target = target,
+                presetId = presetId,
+                draft = updatedPreset.toDraft()
+            )
+        }
+    }
+
+    fun deleteCustomThemePreset(
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId
+    ) {
+        if (catalog.supportsBuiltInPreset(target, presetId)) return
+
+        val existingPresets = _customPresets.value[target].orEmpty()
+        val customPresetExists = existingPresets.any { preset ->
+            preset.descriptor.id == presetId
+        }
+        if (!customPresetExists) return
+
+        val defaultPresetId = catalog.configFor(target).defaultPresetId
+        _customPresets.value = _customPresets.value + (
+            target to existingPresets.filterNot { preset ->
+                preset.descriptor.id == presetId
+            }
+        )
+
+        if (_preferences.value[target]?.presetId == presetId) {
+            _preferences.value = _preferences.value + (
+                target to PageThemePreference(
+                    target = target,
+                    presetId = defaultPresetId
+                )
+            )
+        }
+
+        viewModelScope.launch {
+            themeDataSource.deleteCustomPreset(
+                userId = currentUserId,
+                target = target,
+                presetId = presetId
+            )
+        }
+    }
+
     fun presetIdFor(
         target: PageThemeTargetKey,
         preferences: Map<PageThemeTargetKey, PageThemePreference> = _preferences.value
@@ -194,6 +272,15 @@ class PageThemeViewModel(
                 presetId = config.defaultPresetId
             )
         }
+    }
+
+    private fun PageThemePreset.toDraft(): PageThemeCustomPresetDraft {
+        return PageThemeCustomPresetDraft(
+            displayName = descriptor.displayName,
+            description = descriptor.description,
+            colors = colors,
+            layoutStyle = layoutStyle
+        )
     }
 
     companion object {

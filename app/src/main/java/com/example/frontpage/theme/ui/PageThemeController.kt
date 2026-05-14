@@ -53,6 +53,28 @@ class PageThemeController(
         )
     }
 
+    fun updateCustomThemePreset(
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId,
+        draft: PageThemeCustomPresetDraft
+    ) {
+        viewModel.updateCustomThemePreset(
+            target = target,
+            presetId = presetId,
+            draft = draft
+        )
+    }
+
+    fun deleteCustomThemePreset(
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId
+    ) {
+        viewModel.deleteCustomThemePreset(
+            target = target,
+            presetId = presetId
+        )
+    }
+
     fun presetIdFor(
         target: PageThemeTargetKey,
         preferences: Map<PageThemeTargetKey, PageThemePreference>

@@ -11,7 +11,8 @@ data class SleepLogDraft(
     val notes: String,
     val dreamJournal: String,
     val snoringLevel: SnoringLevel,
-    val tags: String
+    val tags: String,
+    val source: SleepSource = SleepSource.Manual
 ) {
     fun toNewEntry(
         id: Long,
@@ -30,7 +31,8 @@ data class SleepLogDraft(
             dateMillis = wakeDateMillis,
             dreamJournal = dreamJournal,
             snoringLevel = snoringLevel,
-            tags = tags
+            tags = tags,
+            source = source
         )
     }
 
@@ -50,7 +52,8 @@ data class SleepLogDraft(
             dateMillis = wakeDateMillis,
             dreamJournal = dreamJournal,
             snoringLevel = snoringLevel,
-            tags = tags
+            tags = tags,
+            source = source
         )
     }
 }

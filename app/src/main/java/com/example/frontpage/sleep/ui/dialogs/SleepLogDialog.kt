@@ -25,6 +25,7 @@ import com.example.frontpage.sleep.model.SleepDefaults
 import com.example.frontpage.sleep.model.SleepEntry
 import com.example.frontpage.sleep.model.SleepLogDraft
 import com.example.frontpage.sleep.model.SleepQuality
+import com.example.frontpage.sleep.model.SleepSource
 import com.example.frontpage.sleep.model.SleepTag
 import com.example.frontpage.sleep.model.SnoringLevel
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
@@ -33,13 +34,16 @@ import com.example.frontpage.sleep.model.WeekdaySleepSettings
 @Composable
 fun SleepLogDialog(
     existingEntry: SleepEntry? = null,
+    initialDraft: SleepLogDraft? = null,
     goalMinutes: Int,
     weekdaySettings: List<WeekdaySleepSettings> = emptyList(),
     customTags: List<SleepCustomTag> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (SleepLogDraft) -> Unit
 ) {
-    val initialWakeDateMillis = existingEntry?.dateMillis ?: System.currentTimeMillis()
+    val initialWakeDateMillis = existingEntry?.dateMillis
+        ?: initialDraft?.wakeDateMillis
+        ?: System.currentTimeMillis()
     val initialSettings = weekdaySettings.settingsForDate(initialWakeDateMillis)
 
     var wakeDateMillis by remember(existingEntry?.id) {
@@ -47,24 +51,36 @@ fun SleepLogDialog(
     }
 
     var selectedQuality by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.quality ?: SleepQuality.Good)
+        mutableStateOf(existingEntry?.quality ?: initialDraft?.quality ?: SleepQuality.Good)
     }
 
     var notes by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.notes ?: "")
+        mutableStateOf(existingEntry?.notes ?: initialDraft?.notes ?: "")
     }
 
     var dreamJournal by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.dreamJournal ?: "")
+        mutableStateOf(existingEntry?.dreamJournal ?: initialDraft?.dreamJournal ?: "")
     }
 
     var selectedSnoringLevel by remember(existingEntry?.id) {
-        mutableStateOf(existingEntry?.snoringLevel ?: SnoringLevel.None)
+        mutableStateOf(
+            existingEntry?.snoringLevel
+                ?: initialDraft?.snoringLevel
+                ?: SnoringLevel.None
+        )
     }
 
     var selectedTags by remember(existingEntry?.id) {
-        mutableStateOf(SleepTag.optionsFromStorage(existingEntry?.tags.orEmpty()))
+        mutableStateOf(
+            SleepTag.optionsFromStorage(
+                existingEntry?.tags ?: initialDraft?.tags.orEmpty()
+            )
+        )
     }
+
+    val source = existingEntry?.source
+        ?: initialDraft?.source
+        ?: SleepSource.Manual
 
     var selectedTimePicker by remember(existingEntry?.id) {
         mutableStateOf(TimePickerTarget.SleepTime)
@@ -75,16 +91,20 @@ fun SleepLogDialog(
 
     val sleepTimePickerState = rememberTimePickerState(
         initialHour = existingEntry?.sleepHour
+            ?: initialDraft?.sleepHour
             ?: ((initialSettings?.bedtimeMinutes ?: SleepDefaults.BEDTIME_MINUTES) / 60),
         initialMinute = existingEntry?.sleepMinute
+            ?: initialDraft?.sleepMinute
             ?: ((initialSettings?.bedtimeMinutes ?: SleepDefaults.BEDTIME_MINUTES) % 60),
         is24Hour = true
     )
 
     val wakeTimePickerState = rememberTimePickerState(
         initialHour = existingEntry?.wakeHour
+            ?: initialDraft?.wakeHour
             ?: ((initialSettings?.wakeMinutes ?: SleepDefaults.WAKE_MINUTES) / 60),
         initialMinute = existingEntry?.wakeMinute
+            ?: initialDraft?.wakeMinute
             ?: ((initialSettings?.wakeMinutes ?: SleepDefaults.WAKE_MINUTES) % 60),
         is24Hour = true
     )
@@ -105,7 +125,13 @@ fun SleepLogDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (existingEntry == null) "Log Sleep" else "Edit Sleep")
+            Text(
+                when {
+                    existingEntry != null -> "Edit Sleep"
+                    initialDraft != null -> "Review Detected Sleep"
+                    else -> "Log Sleep"
+                }
+            )
         },
         text = {
             Column(
@@ -174,7 +200,8 @@ fun SleepLogDialog(
                             notes = notes.trim(),
                             dreamJournal = dreamJournal.trim(),
                             snoringLevel = selectedSnoringLevel,
-                            tags = SleepTag.toStorageOptions(selectedTags)
+                            tags = SleepTag.toStorageOptions(selectedTags),
+                            source = source
                         )
                     )
                 }

@@ -39,9 +39,34 @@ interface PageThemeDao {
         target: String
     ): String?
 
+    @Query(
+        """
+        SELECT * FROM page_theme_entries
+        WHERE userId = :userId AND target = :target AND id = :id
+        LIMIT 1
+        """
+    )
+    suspend fun getCustomPreset(
+        userId: Long,
+        target: String,
+        id: String
+    ): PageThemeEntry?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertPreference(preference: PageThemePreferenceEntry)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertCustomPreset(preset: PageThemeEntry)
+
+    @Query(
+        """
+        DELETE FROM page_theme_entries
+        WHERE userId = :userId AND target = :target AND id = :id
+        """
+    )
+    suspend fun deleteCustomPreset(
+        userId: Long,
+        target: String,
+        id: String
+    )
 }

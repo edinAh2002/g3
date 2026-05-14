@@ -11,7 +11,9 @@ import com.example.frontpage.auth.model.User
 import com.example.frontpage.data.security.DatabasePassphraseManager
 import com.example.frontpage.mood.data.MoodDao
 import com.example.frontpage.mood.model.MoodEntry
+import com.example.frontpage.sleep.data.SleepDetectionDao
 import com.example.frontpage.sleep.data.SleepDao
+import com.example.frontpage.sleep.model.SleepDetectionCandidate
 import com.example.frontpage.sleep.model.SleepEntry
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import com.example.frontpage.food.data.FoodDao
@@ -30,9 +32,10 @@ import com.example.frontpage.workout.model.WorkoutEntry
         FoodItem::class,
         PageThemePreferenceEntry::class,
         PageThemeEntry::class,
-        WorkoutEntry::class
+        WorkoutEntry::class,
+        SleepDetectionCandidate::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,6 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun foodDao(): FoodDao
     abstract fun pageThemeDao(): PageThemeDao
+    abstract fun sleepDetectionDao(): SleepDetectionDao
 
     companion object {
         @Volatile
@@ -67,7 +71,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .openHelperFactory(factory)
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                     .fallbackToDestructiveMigration()
                     .build()
 
@@ -265,6 +269,41 @@ abstract class AppDatabase : RoomDatabase() {
                         durationMinutes INTEGER NOT NULL,
                         exercisesText TEXT NOT NULL
                     )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sleep_detection_candidates (
+                        id INTEGER NOT NULL,
+                        userId INTEGER NOT NULL DEFAULT 0,
+                        startMillis INTEGER NOT NULL,
+                        endMillis INTEGER NOT NULL,
+                        wakeDateMillis INTEGER NOT NULL,
+                        alarmMillis INTEGER,
+                        confidence INTEGER NOT NULL,
+                        signalSummary TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'Pending',
+                        createdAtMillis INTEGER NOT NULL,
+                        updatedAtMillis INTEGER NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_sleep_detection_candidates_userId_status
+                    ON sleep_detection_candidates(userId, status)
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_sleep_detection_candidates_userId_wakeDateMillis
+                    ON sleep_detection_candidates(userId, wakeDateMillis)
                     """.trimIndent()
                 )
             }

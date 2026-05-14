@@ -14,6 +14,10 @@ internal object SleepSettingsStorageKeys {
     private const val WEEKDAY_WAKE_KEY_PREFIX = "sleep_weekday_wake_minutes_user_"
     private const val CUSTOM_TAGS_KEY_PREFIX = "sleep_custom_tags_user_"
     private const val PAGE_LAYOUT_KEY_PREFIX = "sleep_page_layout_user_"
+    private const val DETECTION_ENABLED_KEY_PREFIX = "sleep_detection_enabled_user_"
+    private const val DETECTION_MINIMUM_KEY_PREFIX = "sleep_detection_minimum_minutes_user_"
+    private const val DETECTION_ALARM_WINDOW_KEY_PREFIX = "sleep_detection_alarm_window_minutes_user_"
+    private const val DETECTION_INTERRUPTION_KEY_PREFIX = "sleep_detection_interruption_minutes_user_"
 
     fun goal(userId: Long): String {
         return "$GOAL_KEY_PREFIX$userId"
@@ -58,4 +62,19 @@ internal object SleepSettingsStorageKeys {
         return "$PAGE_LAYOUT_KEY_PREFIX${userId}_${pageKey.storageValue}"
     }
 
+    fun detectionEnabled(userId: Long): String {
+        return "$DETECTION_ENABLED_KEY_PREFIX$userId"
+    }
+
+    fun detectionMinimumMinutes(userId: Long): String {
+        return "$DETECTION_MINIMUM_KEY_PREFIX$userId"
+    }
+
+    fun detectionAlarmWindowMinutes(userId: Long): String {
+        return "$DETECTION_ALARM_WINDOW_KEY_PREFIX$userId"
+    }
+
+    fun detectionInterruptionMinutes(userId: Long): String {
+        return "$DETECTION_INTERRUPTION_KEY_PREFIX$userId"
+    }
 }

@@ -33,6 +33,19 @@ interface PageThemeDataSource {
         target: PageThemeTargetKey,
         draft: PageThemeCustomPresetDraft
     ): PageThemePreset?
+
+    suspend fun updateCustomPreset(
+        userId: Long?,
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId,
+        draft: PageThemeCustomPresetDraft
+    ): PageThemePreset?
+
+    suspend fun deleteCustomPreset(
+        userId: Long?,
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId
+    ): PageThemePresetId
 }
 
 class PageThemeRepository(
@@ -139,6 +152,79 @@ class PageThemeRepository(
         )
 
         return preset
+    }
+
+    override suspend fun updateCustomPreset(
+        userId: Long?,
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId,
+        draft: PageThemeCustomPresetDraft
+    ): PageThemePreset? {
+        if (userId == null || catalog.supportsBuiltInPreset(target, presetId)) return null
+
+        val existingEntry = themeDao.getCustomPreset(
+            userId = userId,
+            target = target.storageValue,
+            id = presetId.storageValue
+        ) ?: return null
+
+        val now = System.currentTimeMillis()
+        val existingPreset = existingEntry.toPreset()
+        val preset = existingPreset.copy(
+            descriptor = existingPreset.descriptor.copy(
+                displayName = draft.displayName.trim().ifBlank {
+                    existingPreset.descriptor.displayName
+                },
+                description = draft.description.trim().ifBlank {
+                    existingPreset.descriptor.description
+                }
+            ),
+            colors = draft.colors,
+            layoutStyle = draft.layoutStyle
+        )
+
+        themeDao.upsertCustomPreset(
+            preset.toCustomPresetEntity(
+                userId = userId,
+                createdAtMillis = existingEntry.createdAtMillis,
+                updatedAtMillis = now
+            )
+        )
+
+        return preset
+    }
+
+    override suspend fun deleteCustomPreset(
+        userId: Long?,
+        target: PageThemeTargetKey,
+        presetId: PageThemePresetId
+    ): PageThemePresetId {
+        val defaultPresetId = catalog.configFor(target).defaultPresetId
+        if (userId == null || catalog.supportsBuiltInPreset(target, presetId)) return defaultPresetId
+
+        themeDao.deleteCustomPreset(
+            userId = userId,
+            target = target.storageValue,
+            id = presetId.storageValue
+        )
+
+        val storedPresetId = themeDao.getPreferencePresetId(
+            userId = userId,
+            target = target.storageValue
+        )
+
+        if (storedPresetId == presetId.storageValue) {
+            themeDao.upsertPreference(
+                PageThemePreferenceEntry(
+                    userId = userId,
+                    target = target.storageValue,
+                    presetId = defaultPresetId.storageValue,
+                    updatedAtMillis = System.currentTimeMillis()
+                )
+            )
+        }
+
+        return defaultPresetId
     }
 
     private fun storedPreferences(

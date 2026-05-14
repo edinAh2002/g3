@@ -23,5 +23,11 @@ interface SleepLogDataSource {
         id: Long
     )
 
+    suspend fun hasSleepLogForWakeDate(
+        userId: Long,
+        wakeDateStartMillis: Long,
+        wakeDateEndMillis: Long
+    ): Boolean
+
     suspend fun clearAllLogs(userId: Long)
 }

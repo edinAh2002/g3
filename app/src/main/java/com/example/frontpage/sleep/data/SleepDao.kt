@@ -49,6 +49,19 @@ interface SleepDao {
 
     @Query(
         """
+        SELECT COUNT(*) FROM sleep_entries
+        WHERE userId = :userId
+        AND dateMillis BETWEEN :wakeDateStartMillis AND :wakeDateEndMillis
+        """
+    )
+    suspend fun countSleepLogsForWakeDate(
+        userId: Long,
+        wakeDateStartMillis: Long,
+        wakeDateEndMillis: Long
+    ): Int
+
+    @Query(
+        """
         DELETE FROM sleep_entries
         WHERE userId = :userId
         """
