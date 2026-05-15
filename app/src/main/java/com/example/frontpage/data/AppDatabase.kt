@@ -29,13 +29,13 @@ import com.example.frontpage.workout.model.WorkoutEntry
         MoodEntry::class,
         SleepEntry::class,
         User::class,
-        ReminderEntry::class
+        ReminderEntry::class,
         FoodItem::class,
         PageThemePreferenceEntry::class,
         PageThemeEntry::class,
         WorkoutEntry::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
