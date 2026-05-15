@@ -12,12 +12,15 @@ import com.example.frontpage.mood.model.MoodEntry
 import com.example.frontpage.sleep.data.SleepDao
 import com.example.frontpage.sleep.model.SleepEntry
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import com.example.frontpage.reminders.data.ReminderDao
+import com.example.frontpage.reminders.ReminderEntry
 
 @Database(
     entities = [
         MoodEntry::class,
         SleepEntry::class,
-        User::class
+        User::class,
+        ReminderEntry::class
     ],
     version = 6,
     exportSchema = false
@@ -27,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun moodDao(): MoodDao
     abstract fun sleepDao(): SleepDao
     abstract fun userDao(): UserDao
+
+    abstract fun ReminderDao(): ReminderDao
 
     companion object {
         @Volatile

@@ -1,4 +1,4 @@
-package com.example.frontpage
+package com.example.frontpage.reminders
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -15,18 +15,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Calendar
 
-data class MedicineReminder(
-    val id: Int,
-    val medicineName: String,
-    val dosage: String,
-    val date: String,
-    val time: String
-)
-
 @Composable
 fun MedicineWizard(
     onClose: () -> Unit,
-    onReminderCreated: (MedicineReminder) -> Unit
+    onReminderCreated: (ReminderEntry) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -145,12 +137,14 @@ fun MedicineWizard(
                     )
 
                     onReminderCreated(
-                        MedicineReminder(
+                        ReminderEntry(
                             id = id,
+                            userId = 0L,
                             medicineName = medicineName,
                             dosage = dosage,
                             date = displayDate,
-                            time = displayTime
+                            time = displayTime,
+                            triggerTime = triggerTime
                         )
                     )
 
@@ -176,12 +170,11 @@ fun MedicineWizard(
 
 @Composable
 fun ReminderListPopup(
-    reminders: List<MedicineReminder>,
-    onDeleteReminder: (MedicineReminder) -> Unit,
+    reminders: List<ReminderEntry>,
+    onDeleteReminder: (ReminderEntry) -> Unit,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-
     val prefs = context.getSharedPreferences("reminders", Context.MODE_PRIVATE)
 
     val activeReminders = reminders.filter {

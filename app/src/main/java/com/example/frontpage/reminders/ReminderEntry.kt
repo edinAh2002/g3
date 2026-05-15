@@ -11,9 +11,9 @@ data class ReminderEntry(
 
     val userId: Long,
 
-    val title: String,
+    val medicineName: String,
 
-    val description: String,
+    val dosage: String,
 
     val date: String,
 

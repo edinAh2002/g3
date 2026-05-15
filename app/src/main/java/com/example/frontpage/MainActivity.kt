@@ -47,10 +47,16 @@ import com.example.frontpage.auth.ui.LoginScreen
 import com.example.frontpage.auth.ui.SignUpScreen
 import com.example.frontpage.data.AppDatabase
 import com.example.frontpage.mood.ui.MoodFeature
+import com.example.frontpage.reminders.ReminderEntry
+import com.example.frontpage.reminders.MedicineWizard
+import com.example.frontpage.reminders.ReminderListPopup
 import com.example.frontpage.sleep.ui.SleepFeature
 import com.example.frontpage.stepcounter.StepCounterScreen
 import com.example.frontpage.ui.theme.FrontPageTheme
 import com.example.frontpage.workout.ui.WorkoutScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.example.frontpage.reminders.data.ReminderRepository
 
 private enum class AppScreen {
     AuthStart,
@@ -167,7 +173,7 @@ fun FitnessApp(
                     NavigationBarItem(
                         selected = selectedScreen == AppScreen.Mood,
                         onClick = { selectedScreen = AppScreen.Mood },
-                        label = { Text("com/example/frontpage/reminders/notifiers") },
+                        label = {Text("Mood") },
                         icon = { Text("🙂") }
                     )
 
@@ -360,7 +366,20 @@ fun HomeScreen(
     var showMedicineWizard by remember { mutableStateOf(false) }
     var showReminderList by remember { mutableStateOf(false) }
 
-    var reminders by remember { mutableStateOf(listOf<MedicineReminder>()) }
+    val database = AppDatabase.getDatabase(context)
+    val reminderRepository = remember {
+        ReminderRepository(database.ReminderDao())
+    }
+
+    val scope = rememberCoroutineScope()
+
+    var reminders by remember { mutableStateOf(listOf<ReminderEntry>()) }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            reminders = reminderRepository.getAllReminders(currentUserId)
+        }
+    }
 
     val calorieGoal = 2500
     val totalCalories = foodItems.sumOf { it.calories }
@@ -599,7 +618,12 @@ fun HomeScreen(
         MedicineWizard(
             onClose = { showMedicineWizard = false },
             onReminderCreated = { reminder ->
-                reminders = reminders + reminder
+                val userId = currentUserId ?: 0L
+
+                scope.launch {
+                    reminderRepository.addReminder(userId, reminder)
+                    reminders = reminderRepository.getAllReminders(userId)
+                }
             }
         )
     }
@@ -608,7 +632,12 @@ fun HomeScreen(
         ReminderListPopup(
             reminders = reminders,
             onDeleteReminder = { reminder ->
-                reminders = reminders - reminder
+                val userId = currentUserId ?: 0L
+
+                scope.launch {
+                    reminderRepository.deleteReminder(userId, reminder.id)
+                    reminders = reminderRepository.getAllReminders(userId)
+                }
             },
             onClose = { showReminderList = false }
         )
