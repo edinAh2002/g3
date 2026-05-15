@@ -1,4 +1,4 @@
-package com.example.frontpage
+package com.example.frontpage.reminders
 
 import android.app.AlarmManager
 import android.app.PendingIntent
