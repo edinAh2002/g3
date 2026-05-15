@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,7 +25,8 @@ fun LatestSleepCard(
     latestSleep: SleepEntry?,
     goalMinutes: Int,
     onLogSleepClick: () -> Unit,
-    onEditGoalClick: () -> Unit
+    onEditGoalClick: () -> Unit,
+    showTitle: Boolean = true
 ) {
     Card(
         modifier = Modifier
@@ -40,17 +40,28 @@ fun LatestSleepCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Latest Sleep",
-                    style = MaterialTheme.typography.titleMedium
-                )
+            if (showTitle) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Latest Sleep",
+                        style = MaterialTheme.typography.titleMedium
+                    )
 
-                OutlinedButton(onClick = onEditGoalClick) {
-                    Text("Goal")
+                    OutlinedButton(onClick = onEditGoalClick) {
+                        Text("Goal")
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    OutlinedButton(onClick = onEditGoalClick) {
+                        Text("Goal")
+                    }
                 }
             }
 
@@ -102,13 +113,12 @@ fun LatestSleepCard(
                     Text("Tags: ${tags.take(3).joinToString { it.label }}")
                 }
 
-                LinearProgressIndicator(
-                    progress = {
+                GradientSleepProgressBar(
+                    progress =
                         SleepCalculator.calculateGoalProgress(
                             durationMinutes = latestSleep.durationMinutes,
                             goalMinutes = goalMinutes
-                        )
-                    },
+                        ),
                     modifier = Modifier.fillMaxWidth()
                 )
 

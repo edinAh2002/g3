@@ -2,6 +2,9 @@ package com.example.frontpage.sleep.data
 
 import android.content.Context
 import com.example.frontpage.sleep.model.SleepCustomTag
+import com.example.frontpage.sleep.model.SleepPageKey
+import com.example.frontpage.sleep.model.SleepPageLayout
+import com.example.frontpage.sleep.model.SleepPageSectionId
 import com.example.frontpage.sleep.model.SleepWeekday
 import com.example.frontpage.sleep.model.WeekdaySleepSettings
 
@@ -63,6 +66,24 @@ interface SleepSettingsDataSource {
         userId: Long?,
         tagId: String
     ): List<SleepCustomTag>
+
+    fun getSleepPageLayout(
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout
+
+    fun updateSleepPageLayout(
+        userId: Long?,
+        layout: SleepPageLayout
+    ): SleepPageLayout
+
+    fun resetSleepPageLayout(
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout
+
 }
 
 class SharedPreferencesSleepSettingsDataSource(
@@ -200,4 +221,42 @@ class SharedPreferencesSleepSettingsDataSource(
             tagId = tagId
         )
     }
+
+    override fun getSleepPageLayout(
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout {
+        return SleepSettingsRepository.getSleepPageLayout(
+            context = context,
+            userId = userId,
+            pageKey = pageKey,
+            defaultSectionIds = defaultSectionIds
+        )
+    }
+
+    override fun updateSleepPageLayout(
+        userId: Long?,
+        layout: SleepPageLayout
+    ): SleepPageLayout {
+        return SleepSettingsRepository.updateSleepPageLayout(
+            context = context,
+            userId = userId,
+            layout = layout
+        )
+    }
+
+    override fun resetSleepPageLayout(
+        userId: Long?,
+        pageKey: SleepPageKey,
+        defaultSectionIds: List<SleepPageSectionId>
+    ): SleepPageLayout {
+        return SleepSettingsRepository.resetSleepPageLayout(
+            context = context,
+            userId = userId,
+            pageKey = pageKey,
+            defaultSectionIds = defaultSectionIds
+        )
+    }
+
 }

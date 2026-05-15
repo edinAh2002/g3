@@ -26,12 +26,19 @@ import com.example.frontpage.sleep.ui.dialogs.HealthConnectSettingsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepGoalsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepHistorySettingsDialog
 import com.example.frontpage.sleep.ui.dialogs.SleepScheduleTargetsDialog
+import com.example.frontpage.theme.domain.PageThemeCatalog
+import com.example.frontpage.theme.model.PageThemeCustomPresetDraft
+import com.example.frontpage.theme.model.PageThemePreset
+import com.example.frontpage.theme.model.PageThemePresetId
+import com.example.frontpage.theme.model.PageThemeTargetKey
+import com.example.frontpage.theme.ui.dialogs.PageThemeDialog
 
 private enum class SleepSettingsDialog {
     Goals,
     ScheduleTargets,
     CustomTags,
     SleepHistory,
+    Theme,
     HealthConnect
 }
 
@@ -42,6 +49,8 @@ fun SleepSettingsPage(
     customTags: List<SleepCustomTag>,
     totalLogs: Int,
     healthConnectState: SleepHealthConnectState,
+    selectedThemePresetId: PageThemePresetId,
+    customThemePresets: List<PageThemePreset>,
     onUpdateAllWeekdayGoals: (Int) -> Unit,
     onClearSleepHistoryClick: () -> Unit,
     onUpdateWeekdayGoal: (SleepWeekday, Int) -> Unit,
@@ -49,13 +58,23 @@ fun SleepSettingsPage(
     onUpdateAllWeekdayScheduleTargets: (Int, Int) -> Unit,
     onAddCustomTag: (String) -> Unit,
     onDeleteCustomTag: (String) -> Unit,
+    onUpdateThemePreset: (PageThemePresetId) -> Unit,
+    onCreateCustomTheme: (PageThemeCustomPresetDraft) -> Unit,
     onRequestHealthConnectAccessClick: () -> Unit,
     onImportHealthConnectSleepClick: () -> Unit
 ) {
+    val themeCatalog = PageThemeCatalog.Default
     val settings = settingsOrDefaults(weekdaySettings)
     val todaySetting = settings.firstOrNull { setting ->
         setting.weekday == SleepWeekday.fromDateMillis(System.currentTimeMillis())
     } ?: settings.first()
+    val selectedThemeDescriptor = customThemePresets
+        .firstOrNull { preset -> preset.descriptor.id == selectedThemePresetId }
+        ?.descriptor
+        ?: themeCatalog.descriptorFor(
+            target = PageThemeTargetKey.Sleep,
+            presetId = selectedThemePresetId
+        )
 
     var activeDialog by remember { mutableStateOf<SleepSettingsDialog?>(null) }
     var editingGoal by remember { mutableStateOf<WeekdaySleepSettings?>(null) }
@@ -106,6 +125,15 @@ fun SleepSettingsPage(
             description = "Clear sleep logs for the current user.",
             onClick = {
                 activeDialog = SleepSettingsDialog.SleepHistory
+            }
+        )
+
+        SettingsSummaryCard(
+            title = "Sleep Theme",
+            value = selectedThemeDescriptor.displayName,
+            description = selectedThemeDescriptor.description,
+            onClick = {
+                activeDialog = SleepSettingsDialog.Theme
             }
         )
 
@@ -175,6 +203,20 @@ fun SleepSettingsPage(
             SleepHistorySettingsDialog(
                 totalLogs = totalLogs,
                 onClearSleepHistoryClick = onClearSleepHistoryClick,
+                onDismiss = {
+                    activeDialog = null
+                }
+            )
+        }
+
+        SleepSettingsDialog.Theme -> {
+            PageThemeDialog(
+                target = PageThemeTargetKey.Sleep,
+                catalog = themeCatalog,
+                selectedThemePresetId = selectedThemePresetId,
+                customThemePresets = customThemePresets,
+                onSelectThemePreset = onUpdateThemePreset,
+                onCreateCustomTheme = onCreateCustomTheme,
                 onDismiss = {
                     activeDialog = null
                 }

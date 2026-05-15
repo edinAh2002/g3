@@ -18,6 +18,7 @@ data class AuthUiState(
     val confirmPassword: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+
     val currentUsername: String? = null,
     val currentUserId: Long? = null,
     val isGuest: Boolean = false
@@ -43,6 +44,14 @@ class AuthViewModel(
 
     fun getCurrentUserId(): Long? {
         return authRepository.getCurrentUserId()
+    }
+
+    fun getCurrentUsername(): String? {
+        return _uiState.value.currentUsername
+    }
+
+    fun isCurrentUserGuest(): Boolean {
+        return _uiState.value.isGuest
     }
 
     fun loadCurrentUser() {
@@ -85,7 +94,13 @@ class AuthViewModel(
     }
 
     fun resetForm() {
-        _uiState.value = AuthUiState()
+        _uiState.value = _uiState.value.copy(
+            username = "",
+            password = "",
+            confirmPassword = "",
+            isLoading = false,
+            errorMessage = null
+        )
     }
 
     fun logIn() {
@@ -102,7 +117,14 @@ class AuthViewModel(
 
             result.fold(
                 onSuccess = {
-                    _uiState.value = AuthUiState()
+                    val user = authRepository.getCurrentUser()
+
+                    _uiState.value = AuthUiState(
+                        currentUsername = user?.username,
+                        currentUserId = user?.id,
+                        isGuest = user?.isGuest ?: false
+                    )
+
                     _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->
@@ -130,7 +152,14 @@ class AuthViewModel(
 
             result.fold(
                 onSuccess = {
-                    _uiState.value = AuthUiState()
+                    val user = authRepository.getCurrentUser()
+
+                    _uiState.value = AuthUiState(
+                        currentUsername = user?.username,
+                        currentUserId = user?.id,
+                        isGuest = user?.isGuest ?: false
+                    )
+
                     _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->
@@ -154,7 +183,14 @@ class AuthViewModel(
 
             result.fold(
                 onSuccess = {
-                    _uiState.value = AuthUiState()
+                    val user = authRepository.getCurrentUser()
+
+                    _uiState.value = AuthUiState(
+                        currentUsername = user?.username,
+                        currentUserId = user?.id,
+                        isGuest = user?.isGuest ?: false
+                    )
+
                     _authEvents.emit(AuthEvent.Authenticated)
                 },
                 onFailure = { error ->

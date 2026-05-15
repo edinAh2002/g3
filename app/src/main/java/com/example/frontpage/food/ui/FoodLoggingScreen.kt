@@ -1,4 +1,4 @@
-package com.example.frontpage
+package com.example.frontpage.food.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.frontpage.food.model.FoodItem
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,8 +130,8 @@ fun FoodLoggingScreen(
                 onClick = {
                     if (foodName.isNotBlank()) {
                         val newFood = FoodItem(
-                            name = foodName,
-                            calories = calories.toIntOrNull() ?: 0,
+                            mealName = foodName,
+                            calories = calories.toIntOrNull(),
                             protein = protein.toIntOrNull() ?: 0,
                             carbs = carbs.toIntOrNull() ?: 0,
                             fat = fat.toIntOrNull() ?: 0,

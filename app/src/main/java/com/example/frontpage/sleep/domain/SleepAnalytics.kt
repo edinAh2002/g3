@@ -42,6 +42,8 @@ data class SleepTagInsight(
     val description: String
 )
 
+object SleepAnalytics {
+
 fun buildWeeklySleepChartData(
     sleepLogs: List<SleepEntry>
 ): List<WeeklySleepChartItem> {
@@ -423,4 +425,5 @@ private fun calculateCorrelation(
     } else {
         numerator / denominator
     }
+}
 }
