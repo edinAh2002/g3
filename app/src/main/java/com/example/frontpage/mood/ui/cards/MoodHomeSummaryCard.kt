@@ -45,7 +45,7 @@ fun MoodHomeSummaryCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text("com/example/frontpage/reminders/notifiers")
+            Text("Mood")
             Text(
                 text = latestMoodText,
                 style = MaterialTheme.typography.headlineSmall
