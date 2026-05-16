@@ -1,207 +1,35 @@
 package com.example.frontpage.sleep.ui.pages
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.SleepDateUtils
-import com.example.frontpage.sleep.domain.SleepGoalBalance
-import com.example.frontpage.sleep.domain.SleepScoreSummary
-import com.example.frontpage.sleep.domain.SleepStreakSummary
+import com.example.frontpage.sleep.domain.SleepDashboardState
 import com.example.frontpage.sleep.model.SleepEntry
-import com.example.frontpage.sleep.model.SleepTag
-import com.example.frontpage.sleep.model.WeeklySleepChartItem
-import com.example.frontpage.sleep.ui.components.SleepFeedbackCard
-import com.example.frontpage.sleep.ui.components.SleepGoalBalanceCard
-import com.example.frontpage.sleep.ui.components.SleepScoreCard
-import com.example.frontpage.sleep.ui.components.SleepStatCard
-import com.example.frontpage.sleep.ui.components.WeeklySleepChart
+import com.example.frontpage.sleep.model.SleepPageKey
+import com.example.frontpage.sleep.model.SleepPageLayout
+import com.example.frontpage.sleep.model.SleepPageSectionId
+import com.example.frontpage.sleep.ui.components.SleepCustomizablePageContent
 
 @Composable
 fun SleepOverviewPage(
-    latestSleep: SleepEntry?,
-    goalMinutes: Int,
-    averageSleepMinutes: Int,
-    longestSleepMinutes: Int,
-    shortestSleepMinutes: Int,
-    totalLogs: Int,
-    weeklyChartData: List<WeeklySleepChartItem>,
-    sleepScoreSummary: SleepScoreSummary?,
-    sleepGoalBalance: SleepGoalBalance,
-    streakSummary: SleepStreakSummary,
+    dashboardState: SleepDashboardState,
+    sleepLogs: List<SleepEntry>,
+    pageLayout: SleepPageLayout,
+    isEditing: Boolean,
+    onRemoveSection: (SleepPageSectionId) -> Unit,
+    onMoveSectionUp: (SleepPageSectionId) -> Unit,
+    onMoveSectionDown: (SleepPageSectionId) -> Unit,
     onLogSleepClick: () -> Unit,
     onEditGoalClick: () -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        LatestSleepCard(
-            latestSleep = latestSleep,
-            goalMinutes = goalMinutes,
-            onEditGoalClick = onEditGoalClick
-        )
-
-        SleepScoreCard(
-            scoreSummary = sleepScoreSummary
-        )
-
-        SleepGoalBalanceCard(
-            goalBalance = sleepGoalBalance
-        )
-
-        Button(
-            onClick = onLogSleepClick,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Log Sleep")
-        }
-
-        Text(
-            text = "Sleep Statistics",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Average",
-                value = SleepCalculator.formatDuration(averageSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Logs",
-                value = totalLogs.toString(),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Logged Streak",
-                value = "${streakSummary.loggedDayStreak}d",
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Goal Streak",
-                value = "${streakSummary.nearGoalStreak}d",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            SleepStatCard(
-                title = "Longest",
-                value = SleepCalculator.formatDuration(longestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-
-            SleepStatCard(
-                title = "Shortest",
-                value = SleepCalculator.formatDuration(shortestSleepMinutes),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Text(
-            text = "Weekly Sleep Chart",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        WeeklySleepChart(
-            chartData = weeklyChartData,
-            goalMinutes = goalMinutes
-        )
-    }
-}
-
-@Composable
-private fun LatestSleepCard(
-    latestSleep: SleepEntry?,
-    goalMinutes: Int,
-    onEditGoalClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Latest Sleep", style = MaterialTheme.typography.titleMedium)
-
-            if (latestSleep == null) {
-                Text("No sleep logged yet.")
-                Text("Tap Log Sleep to add your first sleep entry.")
-
-            } else {
-                Text(
-                    text = SleepDateUtils.formatHistoryDate(latestSleep.dateMillis),
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Text(
-                    text = SleepCalculator.formatDuration(latestSleep.durationMinutes),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Text(
-                    text = "From ${SleepCalculator.formatTime(latestSleep.sleepHour, latestSleep.sleepMinute)} to ${SleepCalculator.formatTime(latestSleep.wakeHour, latestSleep.wakeMinute)}"
-                )
-
-                Text("Quality: ${latestSleep.quality}")
-                Text("Source: ${latestSleep.source.label}")
-
-                if (latestSleep.snoringLevel.name != "None") {
-                    Text("Snoring: ${latestSleep.snoringLevel.label}")
-                }
-
-                val tags = SleepTag.fromStorage(latestSleep.tags)
-                if (tags.isNotEmpty()) {
-                    Text("Tags: ${tags.take(3).joinToString { it.label }}")
-                }
-
-                LinearProgressIndicator(
-                    progress = {
-                        SleepCalculator.calculateGoalProgress(
-                            durationMinutes = latestSleep.durationMinutes,
-                            goalMinutes = goalMinutes
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Goal: ${SleepCalculator.formatDuration(goalMinutes)}")
-
-                SleepFeedbackCard(
-                    durationMinutes = latestSleep.durationMinutes,
-                    goalMinutes = goalMinutes
-                )
-            }
-        }
-    }
+    SleepCustomizablePageContent(
+        pageKey = SleepPageKey.Overview,
+        layout = pageLayout,
+        dashboardState = dashboardState,
+        sleepLogs = sleepLogs,
+        isEditing = isEditing,
+        onRemoveSection = onRemoveSection,
+        onMoveSectionUp = onMoveSectionUp,
+        onMoveSectionDown = onMoveSectionDown,
+        onLogSleepClick = onLogSleepClick,
+        onEditGoalClick = onEditGoalClick
+    )
 }

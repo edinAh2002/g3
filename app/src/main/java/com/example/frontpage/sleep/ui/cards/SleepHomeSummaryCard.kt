@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.frontpage.sleep.SleepViewModel
+import com.example.frontpage.sleep.domain.SleepAnalytics
 import com.example.frontpage.sleep.domain.SleepCalculator
-import com.example.frontpage.sleep.domain.buildSleepScoreSummary
 
 @Composable
 fun SleepHomeSummaryCard(
@@ -24,20 +24,27 @@ fun SleepHomeSummaryCard(
 ) {
     val sleepLogs by viewModel.sleepLogs.collectAsState()
     val goalMinutes by viewModel.goalMinutes.collectAsState()
+    val weekdaySettings by viewModel.weekdaySettings.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshCurrentUser()
     }
 
     val latestSleep = sleepLogs.lastOrNull()
+    val latestGoalMinutes = latestSleep?.let { sleepEntry ->
+        weekdaySettings.firstOrNull { settings ->
+            settings.weekday == com.example.frontpage.sleep.model.SleepWeekday.fromDateMillis(sleepEntry.dateMillis)
+        }?.goalMinutes
+    } ?: goalMinutes
+
     val sevenDaysAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
     val last7DaysSleepLogs = sleepLogs.filter { it.dateMillis >= sevenDaysAgo }
 
     val variationMinutes = SleepCalculator.calculateSleepConsistencyVariationMinutes(last7DaysSleepLogs)
     val durationRangeMinutes = SleepCalculator.calculateSleepDurationRangeMinutes(last7DaysSleepLogs)
-    val sleepScoreSummary = buildSleepScoreSummary(
+    val sleepScoreSummary = SleepAnalytics.buildSleepScoreSummary(
         latestSleep = latestSleep,
-        goalMinutes = goalMinutes,
+        goalMinutes = latestGoalMinutes,
         consistencyVariationMinutes = variationMinutes,
         durationRangeMinutes = durationRangeMinutes
     )

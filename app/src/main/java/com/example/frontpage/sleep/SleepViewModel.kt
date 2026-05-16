@@ -7,11 +7,26 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.frontpage.auth.data.AuthRepository
 import com.example.frontpage.data.AppDatabase
+import com.example.frontpage.mood.data.MoodRepository
+import com.example.frontpage.sleep.data.SharedPreferencesSleepSettingsDataSource
+import com.example.frontpage.sleep.data.SleepHealthDataSource
 import com.example.frontpage.sleep.data.SleepHealthConnectManager
+import com.example.frontpage.sleep.data.SleepLogDataSource
+import com.example.frontpage.sleep.data.SleepPreviewSeedCleaner
 import com.example.frontpage.sleep.data.SleepRepository
-import com.example.frontpage.sleep.data.SleepSettingsRepository
+import com.example.frontpage.sleep.data.SleepSettingsDataSource
+import com.example.frontpage.sleep.domain.SleepGoalHistoryProtector
+import com.example.frontpage.sleep.domain.SleepPageLayoutManager
+import com.example.frontpage.sleep.model.SleepCustomTag
+import com.example.frontpage.sleep.model.SleepDefaults
 import com.example.frontpage.sleep.model.SleepHealthConnectState
 import com.example.frontpage.sleep.model.SleepEntry
+import com.example.frontpage.sleep.model.SleepPageKey
+import com.example.frontpage.sleep.model.SleepPageLayout
+import com.example.frontpage.sleep.model.SleepPageLayoutDefaults
+import com.example.frontpage.sleep.model.SleepPageSectionId
+import com.example.frontpage.sleep.model.SleepWeekday
+import com.example.frontpage.sleep.model.WeekdaySleepSettings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,9 +41,13 @@ class SleepViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val repository: SleepRepository
+    private val repository: SleepLogDataSource
     private val authRepository: AuthRepository
-    private val sleepHealthConnectManager: SleepHealthConnectManager
+    private val sleepHealthDataSource: SleepHealthDataSource
+    private val settingsDataSource: SleepSettingsDataSource
+    private val goalHistoryProtector: SleepGoalHistoryProtector
+    private val pageLayoutManager: SleepPageLayoutManager
+    private val previewSeedCleaner: SleepPreviewSeedCleaner
 
     private val authPreferences: SharedPreferences
     private val appContext = application.applicationContext
@@ -37,11 +56,22 @@ class SleepViewModel(
 
     val sleepLogs: StateFlow<List<SleepEntry>>
 
-    private val _goalMinutes = MutableStateFlow(SleepSettingsRepository.DEFAULT_SLEEP_GOAL_MINUTES)
+    private val _goalMinutes = MutableStateFlow(SleepDefaults.SLEEP_GOAL_MINUTES)
     val goalMinutes: StateFlow<Int> = _goalMinutes
+
+    private val _weekdaySettings = MutableStateFlow<List<WeekdaySleepSettings>>(emptyList())
+    val weekdaySettings: StateFlow<List<WeekdaySleepSettings>> = _weekdaySettings
+
+    private val _customTags = MutableStateFlow<List<SleepCustomTag>>(emptyList())
+    val customTags: StateFlow<List<SleepCustomTag>> = _customTags
+
+    private val _pageLayouts = MutableStateFlow(SleepPageLayoutDefaults.defaultLayouts())
+    val pageLayouts: StateFlow<Map<SleepPageKey, SleepPageLayout>> = _pageLayouts
 
     private val _healthConnectState = MutableStateFlow(SleepHealthConnectState())
     val healthConnectState: StateFlow<SleepHealthConnectState> = _healthConnectState
+    val sleepHealthPermissions: Set<String>
+        get() = sleepHealthDataSource.requiredPermissions
 
     private val authPreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
@@ -52,7 +82,16 @@ class SleepViewModel(
         val database = AppDatabase.getDatabase(application)
 
         repository = SleepRepository(database.sleepDao())
-        sleepHealthConnectManager = SleepHealthConnectManager(appContext)
+        val previewMoodRepository = MoodRepository(database.moodDao())
+        settingsDataSource = SharedPreferencesSleepSettingsDataSource(appContext)
+        sleepHealthDataSource = SleepHealthConnectManager(appContext)
+        goalHistoryProtector = SleepGoalHistoryProtector(settingsDataSource)
+        pageLayoutManager = SleepPageLayoutManager(settingsDataSource)
+        previewSeedCleaner = SleepPreviewSeedCleaner(
+            context = appContext,
+            sleepLogDataSource = repository,
+            moodRepository = previewMoodRepository
+        )
 
         authRepository = AuthRepository(
             userDao = database.userDao(),
@@ -67,7 +106,7 @@ class SleepViewModel(
         authPreferences.registerOnSharedPreferenceChangeListener(authPreferenceListener)
 
         currentUserId.value = authRepository.getCurrentUserId()
-        refreshSleepGoal()
+        refreshSleepSettings()
         refreshHealthConnectState()
 
         sleepLogs = currentUserId
@@ -87,29 +126,198 @@ class SleepViewModel(
 
     fun refreshCurrentUser() {
         currentUserId.value = authRepository.getCurrentUserId()
-        refreshSleepGoal()
+        refreshSleepSettings()
     }
 
     private fun getCurrentUserIdOrRefresh(): Long? {
         val userId = authRepository.getCurrentUserId()
         currentUserId.value = userId
-        refreshSleepGoal()
+        refreshSleepSettings()
         return userId
     }
 
     fun updateSleepGoalMinutes(newGoalMinutes: Int) {
-        val updatedGoalMinutes = SleepSettingsRepository.updateSleepGoalMinutes(
-            context = appContext,
-            userId = getCurrentUserIdOrRefresh(),
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { true }
+        )
+
+        val updatedGoalMinutes = settingsDataSource.updateSleepGoalMinutes(
+            userId = userId,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        _goalMinutes.value = updatedGoalMinutes
+        refreshSleepSettings()
+    }
+
+    fun updateTodaySleepGoalMinutes(newGoalMinutes: Int) {
+        val todayMillis = System.currentTimeMillis()
+        val todayWeekday = SleepWeekday.fromDateMillis(todayMillis)
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { dateMillis ->
+                SleepWeekday.fromDateMillis(dateMillis) == todayWeekday
+            }
+        )
+
+        _weekdaySettings.value = settingsDataSource.updateWeekdayGoalMinutes(
+            userId = userId,
+            weekday = todayWeekday,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        val updatedGoalMinutes = settingsDataSource.updateSleepGoalMinutesForDate(
+            userId = userId,
+            dateMillis = todayMillis,
             newGoalMinutes = newGoalMinutes
         )
 
         _goalMinutes.value = updatedGoalMinutes
     }
 
+    fun updateWeekdayGoalMinutes(
+        weekday: SleepWeekday,
+        newGoalMinutes: Int
+    ) {
+        val userId = getCurrentUserIdOrRefresh()
+
+        snapshotPastSleepGoalDates(
+            userId = userId,
+            shouldSnapshot = { dateMillis ->
+                SleepWeekday.fromDateMillis(dateMillis) == weekday
+            }
+        )
+
+        _weekdaySettings.value = settingsDataSource.updateWeekdayGoalMinutes(
+            userId = userId,
+            weekday = weekday,
+            newGoalMinutes = newGoalMinutes
+        )
+
+        refreshSleepGoal()
+    }
+
+    fun updateWeekdayScheduleTargets(
+        weekday: SleepWeekday,
+        bedtimeMinutes: Int,
+        wakeMinutes: Int
+    ) {
+        _weekdaySettings.value = settingsDataSource.updateWeekdayScheduleTargets(
+            userId = getCurrentUserIdOrRefresh(),
+            weekday = weekday,
+            bedtimeMinutes = bedtimeMinutes,
+            wakeMinutes = wakeMinutes
+        )
+    }
+
+    fun updateAllWeekdayScheduleTargets(
+        bedtimeMinutes: Int,
+        wakeMinutes: Int
+    ) {
+        _weekdaySettings.value = settingsDataSource.updateAllWeekdayScheduleTargets(
+            userId = getCurrentUserIdOrRefresh(),
+            bedtimeMinutes = bedtimeMinutes,
+            wakeMinutes = wakeMinutes
+        )
+    }
+
+    fun addCustomTag(label: String) {
+        _customTags.value = settingsDataSource.addCustomTag(
+            userId = getCurrentUserIdOrRefresh(),
+            label = label
+        )
+    }
+
+    fun deleteCustomTag(tagId: String) {
+        _customTags.value = settingsDataSource.deleteCustomTag(
+            userId = getCurrentUserIdOrRefresh(),
+            tagId = tagId
+        )
+    }
+
+    fun addSleepPageSection(
+        pageKey: SleepPageKey,
+        sectionId: SleepPageSectionId
+    ) {
+        val layout = pageLayoutManager.addSection(
+            userId = getCurrentUserIdOrRefresh(),
+            currentLayouts = _pageLayouts.value,
+            pageKey = pageKey,
+            sectionId = sectionId
+        )
+
+        _pageLayouts.value = _pageLayouts.value + (pageKey to layout)
+    }
+
+    fun removeSleepPageSection(
+        pageKey: SleepPageKey,
+        sectionId: SleepPageSectionId
+    ) {
+        val layout = pageLayoutManager.removeSection(
+            userId = getCurrentUserIdOrRefresh(),
+            currentLayouts = _pageLayouts.value,
+            pageKey = pageKey,
+            sectionId = sectionId
+        )
+
+        _pageLayouts.value = _pageLayouts.value + (pageKey to layout)
+    }
+
+    fun moveSleepPageSectionUp(
+        pageKey: SleepPageKey,
+        sectionId: SleepPageSectionId
+    ) {
+        moveSleepPageSection(
+            pageKey = pageKey,
+            sectionId = sectionId,
+            offset = -1
+        )
+    }
+
+    fun moveSleepPageSectionDown(
+        pageKey: SleepPageKey,
+        sectionId: SleepPageSectionId
+    ) {
+        moveSleepPageSection(
+            pageKey = pageKey,
+            sectionId = sectionId,
+            offset = 1
+        )
+    }
+
+    fun resetSleepPageLayout(pageKey: SleepPageKey) {
+        val layout = pageLayoutManager.resetLayout(
+            userId = getCurrentUserIdOrRefresh(),
+            pageKey = pageKey
+        )
+
+        _pageLayouts.value = _pageLayouts.value + (pageKey to layout)
+    }
+
+    fun removeFakeMoodSleepContextLinks(onRemoved: () -> Unit = {}) {
+        viewModelScope.launch {
+            val userId = getCurrentUserIdOrRefresh() ?: return@launch
+
+            previewSeedCleaner.removeFakeMoodSleepContextLinks(userId)
+            onRemoved()
+        }
+    }
+
+    fun getGoalMinutesForDate(dateMillis: Long): Int {
+        return settingsDataSource.getSleepGoalMinutesForDate(
+            userId = currentUserId.value,
+            dateMillis = dateMillis
+        )
+    }
+
     fun refreshHealthConnectState() {
         viewModelScope.launch {
-            _healthConnectState.value = sleepHealthConnectManager.getState().copy(
+            _healthConnectState.value = sleepHealthDataSource.getState().copy(
                 lastImportMessage = _healthConnectState.value.lastImportMessage
             )
         }
@@ -128,7 +336,7 @@ class SleepViewModel(
     }
 
     fun onHealthConnectPermissionsChanged(grantedPermissions: Set<String>) {
-        val hasSleepPermission = grantedPermissions.containsAll(SleepHealthConnectManager.PERMISSIONS)
+        val hasSleepPermission = grantedPermissions.containsAll(sleepHealthDataSource.requiredPermissions)
 
         _healthConnectState.value = _healthConnectState.value.copy(
             hasSleepPermission = hasSleepPermission,
@@ -158,7 +366,7 @@ class SleepViewModel(
                 lastImportMessage = null
             )
 
-            val importedEntries = sleepHealthConnectManager.readSleepSessionsFromLast30Days()
+            val importedEntries = sleepHealthDataSource.readSleepSessionsFromLast30Days()
 
             importedEntries.forEach { entry ->
                 repository.addSleep(
@@ -167,7 +375,7 @@ class SleepViewModel(
                 )
             }
 
-            _healthConnectState.value = sleepHealthConnectManager.getState().copy(
+            _healthConnectState.value = sleepHealthDataSource.getState().copy(
                 isImporting = false,
                 lastImportMessage = if (importedEntries.isEmpty()) {
                     "No Health Connect sleep sessions found from the last 30 days."
@@ -220,9 +428,52 @@ class SleepViewModel(
     }
 
     private fun refreshSleepGoal() {
-        _goalMinutes.value = SleepSettingsRepository.getSleepGoalMinutes(
-            context = appContext,
+        _goalMinutes.value = settingsDataSource.getSleepGoalMinutes(
             userId = currentUserId.value
+        )
+    }
+
+    private fun refreshSleepSettings() {
+        refreshSleepGoal()
+
+        _weekdaySettings.value = settingsDataSource.getWeekdaySleepSettings(
+            userId = currentUserId.value
+        )
+
+        _customTags.value = settingsDataSource.getCustomTags(
+            userId = currentUserId.value
+        )
+
+        _pageLayouts.value = pageLayoutManager.loadLayouts(
+            userId = currentUserId.value
+        )
+
+    }
+
+    private fun moveSleepPageSection(
+        pageKey: SleepPageKey,
+        sectionId: SleepPageSectionId,
+        offset: Int
+    ) {
+        val layout = pageLayoutManager.moveSection(
+            userId = getCurrentUserIdOrRefresh(),
+            currentLayouts = _pageLayouts.value,
+            pageKey = pageKey,
+            sectionId = sectionId,
+            offset = offset
+        )
+
+        _pageLayouts.value = _pageLayouts.value + (pageKey to layout)
+    }
+
+    private fun snapshotPastSleepGoalDates(
+        userId: Long?,
+        shouldSnapshot: (Long) -> Boolean
+    ) {
+        goalHistoryProtector.snapshotPastGoalDates(
+            userId = userId,
+            sleepLogs = sleepLogs.value,
+            shouldSnapshot = shouldSnapshot
         )
     }
 
