@@ -1,64 +1,41 @@
 package com.example.frontpage.stepcounter
 
-import android.Manifest
-import android.os.Build
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import androidx.compose.ui.graphics.Color
+import androidx.health.connect.client.PermissionController
+import com.example.frontpage.stepcounter.data.StepsHealthConnectManager
+import kotlinx.coroutines.delay
 @Composable
 fun StepCounterScreen(
     modifier: Modifier = Modifier,
     viewModel: StepCounterViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     var showGoalDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
     var goalText by remember { mutableStateOf(uiState.goal.toString()) }
 
-    var hasPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACTIVITY_RECOGNITION
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true
-            }
-        )
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasPermission = granted
-
-        if (granted) {
-            viewModel.startStepCounter()
+    val healthConnectPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = PermissionController.createRequestPermissionResultContract()
+        ) {
+            viewModel.refreshHealthConnectState()
+            viewModel.refreshTodaySteps()
         }
-    }
 
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasPermission) {
-            permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-        } else {
-            viewModel.startStepCounter()
-        }
-    }
+        viewModel.refreshHealthConnectState()
 
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.stopStepCounter()
+        while (true) {
+            viewModel.refreshTodaySteps()
+            delay(30_000)
         }
     }
 
@@ -68,9 +45,39 @@ fun StepCounterScreen(
             .fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Step Counter", style = MaterialTheme.typography.headlineSmall)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Step Counter",
+                style = MaterialTheme.typography.headlineSmall
+            )
 
-        if (!hasPermission) {
+            IconButton(
+                onClick = { showInfoDialog = true }
+            ) {
+                Text("ℹ️")
+            }
+        }
+
+        if (!uiState.isHealthConnectAvailable) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = "Health Connect is not available on this device.",
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            return@Column
+        }
+
+        if (!uiState.hasHealthConnectPermission) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -79,38 +86,38 @@ fun StepCounterScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Permission needed")
-                    Text("Allow physical activity permission to count steps.")
+                    Text("Allow Health Connect step permission to show your steps.")
                 }
             }
 
             Button(
                 onClick = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                    }
-                }
+                    healthConnectPermissionLauncher.launch(
+                        StepsHealthConnectManager.PERMISSIONS
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Grant Permission")
+                Text("Grant Health Connect permission")
             }
 
             return@Column
         }
 
-        if (!uiState.isSensorAvailable) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Text(
-                    text = "Step counter sensor is not available on this device.",
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+        val goalAchieved = uiState.steps >= uiState.goal
+
+        val stepCardColor = if (goalAchieved) {
+            Color(0xFF4CAF50)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = stepCardColor
+            )
+        ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -132,10 +139,10 @@ fun StepCounterScreen(
         }
 
         Button(
-            onClick = { viewModel.resetSteps() },
+            onClick = { viewModel.refreshTodaySteps() },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Reset steps")
+            Text("Refresh steps")
         }
 
         Button(
@@ -145,8 +152,52 @@ fun StepCounterScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Change goal")
+            Text("Change daily goal")
         }
+    }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showInfoDialog = false
+            },
+            title = {
+                Text("How step tracking works")
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "This app reads your step count from Health Connect."
+                    )
+
+                    Text(
+                        "Health Connect does not always count steps by itself. On older Android versions, another app needs to write step data into Health Connect first."
+                    )
+
+                    Text(
+                        "You can use an app like Google Fit, Fitbit, Samsung Health, or another fitness app that supports Health Connect."
+                    )
+
+                    Text(
+                        "Once that app is connected to Health Connect and has permission to write steps, this app can read and display your daily step count."
+                    )
+                    Text(
+                        "On Android 13 or older, some apps and wearables may not be able to write step data to Health Connect."
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showInfoDialog = false
+                    }
+                ) {
+                    Text("Got it")
+                }
+            }
+        )
     }
 
     if (showGoalDialog) {
