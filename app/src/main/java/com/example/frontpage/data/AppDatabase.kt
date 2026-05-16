@@ -14,6 +14,8 @@ import com.example.frontpage.mood.model.MoodEntry
 import com.example.frontpage.sleep.data.SleepDao
 import com.example.frontpage.sleep.model.SleepEntry
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import com.example.frontpage.stepcounter.data.StepsDao
+import com.example.frontpage.stepcounter.model.StepsEntry
 import com.example.frontpage.reminders.data.ReminderDao
 import com.example.frontpage.reminders.ReminderEntry
 import com.example.frontpage.food.data.FoodDao
@@ -29,13 +31,14 @@ import com.example.frontpage.workout.model.WorkoutEntry
         MoodEntry::class,
         SleepEntry::class,
         User::class,
+        StepsEntry::class,
         ReminderEntry::class,
         FoodItem::class,
         PageThemePreferenceEntry::class,
         PageThemeEntry::class,
         WorkoutEntry::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,10 +46,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun moodDao(): MoodDao
     abstract fun sleepDao(): SleepDao
     abstract fun userDao(): UserDao
+    abstract fun stepsDao(): StepsDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun foodDao(): FoodDao
     abstract fun pageThemeDao(): PageThemeDao
-
     abstract fun ReminderDao(): ReminderDao
 
     companion object {
